@@ -1,0 +1,23 @@
+{
+  "name": "sea-battle-server",
+  "version": "1.0.0",
+  "description": "backend server for sea battle game",
+  "main": "server.ts",
+  "scripts": {
+    "nodemon": "nodemon server.ts"
+  },
+  "author": "atakowiec",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/hapi": "^21.3.3",
+    "joi": "^17.12.1",
+    "socket.io": "^4.7.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.16",
+    "nodemon": "^3.0.3",
+    "typescript": "^5.3.3"
+  }
+}
