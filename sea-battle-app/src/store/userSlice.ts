@@ -1,17 +1,18 @@
 import { createSlice} from "@reduxjs/toolkit";
 
 export interface UserState {
-    nickname: string | null;
+    username: string | null;
 }
 
 const userSlice = createSlice({
     name: 'user',
     initialState: {
-        nickname: localStorage.getItem('nickname'),
+        username: localStorage.getItem('username'),
     } as UserState,
     reducers: {
-        setNickname(state, action) {
-            state.nickname = action.payload;
+        setUsername(state, action) {
+            state.username = action.payload;
+            localStorage.setItem('username', action.payload);
         }
     }
 });
