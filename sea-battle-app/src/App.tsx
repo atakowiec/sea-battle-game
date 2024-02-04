@@ -1,21 +1,24 @@
 import {useSelector} from "react-redux";
 import {State} from "./store";
-import EnterUsernamePage from "./components/EnterNicknamePage.tsx";
+import EnterUsernamePage from "./components/EnterUsernamePage.tsx";
 import MainMenu from "./components/MainMenu.tsx";
 import Game from "./components/game/Game.tsx";
 import PreGameLobby from "./components/game/PreGameLobby.tsx";
 
 function App() {
-    const loggedIn = useSelector((state: State) => state.user.username != null)
+    const user = useSelector((state: State) => state.user)
     const currentGame = useSelector((state: State) => state.game)
 
-    if (!loggedIn)
+    if(!user.usernameChecked)
+        return;
+
+    if (!user.username)
         return <EnterUsernamePage/>
 
     if (!currentGame)
         return <MainMenu/>
 
-    if (!currentGame.isStarted)
+    if (currentGame.status === "lobby")
         return <PreGameLobby/>
 
     return <Game/>

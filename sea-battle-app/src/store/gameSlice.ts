@@ -1,21 +1,38 @@
 import {createSlice} from "@reduxjs/toolkit";
-import {Board} from "@shared/gameTypes.ts";
+import {Board, GameStatus} from "@shared/gameTypes.ts";
+import {emptyBoard} from "../util/gameUtil.ts";
 
 export interface GameState {
-    isStarted: boolean;
-    isOver: boolean;
+    id: string;
+    status: GameStatus
+    over: boolean;
     user: string;
     opponent: string;
     board: Board;
     opponentBoard: Board;
+    turn: boolean;
+    winner: string | null;
 }
 
 const gameSlice = createSlice({
     name: 'game',
     initialState: null as GameState | null,
-    reducers: {}
+    reducers: {
+        setGameData(_, action) {
+            return {
+                status: "lobby",
+                over: false,
+                opponent: null,
+                winner: null,
+                board: emptyBoard(),
+                opponentBoard: emptyBoard(),
+                turn: false,
+                ...action.payload
+            };
+        }
+    }
 });
 
 export default gameSlice;
 
-export const actions = gameSlice.actions;
+export const gameActions = gameSlice.actions;

@@ -1,19 +1,30 @@
 import appStyle from "../style/app.module.scss"
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {State} from "../store";
 import {useRef} from "react";
+import useSocket from "../socket/useSocket.ts";
+import {Room} from "@shared/gameTypes.ts";
+import {gameActions} from "../store/gameSlice.ts";
 
 export default function MainMenu() {
-    const nickname = useSelector((state: State) => state.user.username)
+    const username = useSelector((state: State) => state.user.username)
     const gameIdRef = useRef(null)
+    const socket = useSocket()
+    const dispatch = useDispatch()
+
+    function createNewRoom() {
+        socket.emit("create_room", (room: Room) => {
+            dispatch(gameActions.setGameData(room))
+        })
+    }
 
     return (
         <div className={appStyle.centeredContainer}>
             <div className={`${appStyle.preGameMenu} ${appStyle.box}`}>
                 <h1>Sea Battle Game!</h1>
-                <h5>Hello {nickname}</h5>
+                <h5>Hello {username}</h5>
                 <div>
-                    <button>
+                    <button onClick={createNewRoom}>
                         Create new game
                     </button>
                 </div>

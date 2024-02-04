@@ -7,7 +7,7 @@ const init = async () => {
         port: 3000,
     });
 
-    await server.register(require('./socket/socketHandler.ts'))
+    await server.register(require('./game/gameHandler.ts'))
     await server.start();
 
     console.log('Server running on http://localhost:%s', server.info.port);

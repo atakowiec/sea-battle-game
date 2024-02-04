@@ -4,13 +4,13 @@ import {useDispatch} from "react-redux";
 import {actions} from "../store/userSlice.ts";
 import useSocket from "../socket/useSocket.ts";
 
-export default function EnterNicknamePage() {
+export default function EnterUsernamePage() {
     const [input, setInput] = useState("")
     const dispatch = useDispatch()
     const [error, setError] = useState(null as string | null)
     const socket = useSocket()
 
-    function save(e : FormEvent<HTMLFormElement>) {
+    function save(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
 
         if (input.length < 3)
@@ -19,12 +19,16 @@ export default function EnterNicknamePage() {
         if (input.length > 16)
             return setError("Username is too long!")
 
-        if (!/^[A-Za-z0-9]+$/.test(input)) {
+        if (!/^[A-Za-z0-9]+$/.test(input))
             return setError("Only letters and numbers are allowed!")
-        }
 
-        dispatch(actions.setUsername(input))
-        socket.emit("set_username", input)
+
+        socket.emit("set_username", input, (error: boolean, message?: string) => {
+            if (error)
+                return setError(message!)
+
+            dispatch(actions.setUsername(input))
+        })
     }
 
     return (
@@ -42,7 +46,6 @@ export default function EnterNicknamePage() {
                     <div className={appStyle.errorBox}>
                         {error}
                     </div>}
-
                 <button>
                     Done
                 </button>
