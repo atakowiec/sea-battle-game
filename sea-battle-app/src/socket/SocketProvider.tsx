@@ -54,7 +54,7 @@ export function SocketProvider({children}: { children?: ReactNode }) {
 
             setTimeout(() => {
                 dispatch(notificationActions.removeNotification(newId))
-            }, 3000)
+            }, 6000)
         });
 
         socket.on('error', (message) => {
@@ -67,7 +67,7 @@ export function SocketProvider({children}: { children?: ReactNode }) {
 
             setTimeout(() => {
                 dispatch(notificationActions.removeNotification(newId))
-            }, 3000)
+            }, 6000)
         });
 
         socket.on('disconnect', () => {

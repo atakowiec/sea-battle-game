@@ -160,7 +160,7 @@ export class Game {
             player: this.player?.username ?? null,
             status: this.status,
             winner: this.winner,
-            ownerTurn: this.ownerTurn,
+            yourTurn: member === this.player ? this.ownerTurn : !this.ownerTurn,
             board: member.board,
             shots: member.shots,
             playerOnline: !this.player?.socket.disconnected,

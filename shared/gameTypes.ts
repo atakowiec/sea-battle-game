@@ -17,7 +17,7 @@ export interface GamePacket {
     player?: string | null;
     status?: GameStatus;
     winner?: string | null;
-    ownerTurn?: boolean;
+    yourTurn?: boolean;
     board?: BoardType;
     shots?: BoardType;
     playerOnline?: boolean;

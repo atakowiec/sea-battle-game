@@ -1,5 +1,6 @@
 import {createSlice} from "@reduxjs/toolkit";
 import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {useDispatch} from "react-redux";
 
 export interface GameState {
     id: string;
@@ -8,7 +9,7 @@ export interface GameState {
     player: string | null;
     board: BoardType | null;
     shots: BoardType | null;
-    ownerTurn: boolean;
+    yourTurn: boolean;
     winner: string | null;
     playerOnline?: boolean;
     ownerOnline?: boolean;
@@ -34,7 +35,7 @@ const gameSlice = createSlice({
                 status: payload.status,
                 board: payload.board ?? null,
                 shots: payload.shots ?? null,
-                ownerTurn: payload.ownerTurn,
+                yourTurn: payload.yourTurn,
                 winner: payload.winner ?? null,
                 playerOnline: payload.playerOnline ?? false,
                 ownerOnline: payload.ownerOnline ?? false,
@@ -64,19 +65,31 @@ const gameSlice = createSlice({
             state.cornerCollisionsAllowed = action.payload.cornerCollisionsAllowed ?? state.cornerCollisionsAllowed;
             state.shipWrappingAllowed = action.payload.shipWrappingAllowed ?? state.shipWrappingAllowed;
         },
-        changeMyBoardCell(state, action) {
-            if (state === null) {
+        placeShip(state, action) {
+            if (state === null || state.board === null) {
                 return state;
             }
+
+            if (state.status !== 'preparing') return state;
 
             const x = action.payload.x;
             const y = action.payload.y;
 
-            if (state.board === null) {
+            state.board[x][y].ship = !state.board[x][y].ship;
+        },
+        shoot(state, action) {
+            if (state === null || state.shots === null) {
                 return state;
             }
 
-            state.board[x][y].ship = !state.board[x][y].ship;
+            if (state.status !== 'playing' || !state.yourTurn) return state;
+
+            const x = action.payload.x;
+            const y = action.payload.y;
+
+            if (state.shots[x][y].hit) return state;
+
+            state.shots[x][y].hit = true;
         }
     }
 });
