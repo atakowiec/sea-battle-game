@@ -18,6 +18,7 @@ export interface ClientToServerEvents {
     kick: () => void
     leave_game: () => void
     set_username: (username: string | null, callback: (error: boolean, message?: string) => void) => void
+    delete_game: () => void
 }
 
 export type ClientToServerEventsKeys = keyof ClientToServerEvents

@@ -29,6 +29,8 @@ module.exports = {
 
             socket.on("leave_game", () => socket.data.game?.leave(socket))
 
+            socket.on("delete_game", () => socket.data.game?.deleteGame(socket))
+
             socket.on("set_username", (username, callback) => setUserName(socket, username, callback))
 
             socket.on('disconnect', () => {

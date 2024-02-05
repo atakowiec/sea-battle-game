@@ -76,7 +76,7 @@ export class Game {
     checkPlayerKick() {
         if (this.player?.socket.disconnected) {
             this.player = null;
-            this.emitRoomChange({
+            this.emitGameChange({
                 player: null
             });
             this.emitOwner("info", "The player has been kicked from the game for being disconnected")
@@ -105,6 +105,14 @@ export class Game {
         return true
     }
 
+    deleteGame(socket: SocketType) {
+        if (!Game.checkUsername(socket)) return;
+        if (!this.checkAdmin(socket)) return;
+
+        this.emit("info", "The game has been deleted")
+        this.remove();
+    }
+
     getPacket(member: GameMember): GamePacket {
         return {
             id: this.id,
@@ -115,6 +123,8 @@ export class Game {
             ownerTurn: this.ownerTurn,
             board: member.board,
             shots: member.shots,
+            playerOnline: !this.player?.socket.disconnected,
+            ownerOnline: !this.owner.socket.disconnected,
         }
     }
 
@@ -134,7 +144,7 @@ export class Game {
         this.player.socket.leave(this.id);
         this.player.socket.data.game = null;
         this.player = null;
-        this.emitRoomChange({
+        this.emitGameChange({
             player: null
         });
     }
@@ -187,7 +197,7 @@ export class Game {
 
         // emit changes to players
         this.emitPlayer("game_set", null);
-        this.emitRoomChange({
+        this.emitGameChange({
             player: null
         });
 
@@ -207,12 +217,14 @@ export class Game {
         if (this.owner.username === socket.data.username) {
             this.owner.socket = socket;
             this.emitOwner("game_set", this.getPacket(this.owner));
+            this.emitPlayer("game_updated", {ownerOnline: true})
 
             if (this.ownerTimeout)
                 clearTimeout(this.ownerTimeout)
         } else if (this.player?.username === socket.data.username) {
             this.player.socket = socket;
             this.emitPlayer("game_set", this.getPacket(this.player));
+            this.emitOwner("game_updated", {playerOnline: true})
 
             if (this.playerTimeout)
                 clearTimeout(this.playerTimeout)
@@ -238,6 +250,7 @@ export class Game {
     onOwnerDisconnect() {
         if (!this.player || this.player.socket.disconnected) return this.remove();
         this.emitPlayer("info", `${this.owner.username} has disconnected, waiting for reconnection`)
+        this.emitPlayer("game_updated", {ownerOnline: false})
 
         if (this.ownerTimeout)
             clearTimeout(this.ownerTimeout);
@@ -250,6 +263,7 @@ export class Game {
      */
     onPlayerDisconnect() {
         this.emitOwner("info", `${this.player?.username} has disconnected, waiting for reconnection`)
+        this.emitOwner("game_updated", {playerOnline: false})
 
         if (this.playerTimeout)
             clearTimeout(this.playerTimeout);
@@ -275,7 +289,7 @@ export class Game {
     }
 
 
-    emitRoomChange(packet: GamePacket) {
+    emitGameChange(packet: GamePacket) {
         this.emit("game_updated", packet);
     }
 }

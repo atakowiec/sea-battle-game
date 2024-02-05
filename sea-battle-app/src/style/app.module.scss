@@ -80,6 +80,22 @@ body {
         margin-bottom: 20px;
       }
 
+      .deleteGame {
+        padding: 11px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #ff4747;
+        color: #fff;
+        cursor: pointer;
+        transition: 0.3s;
+        margin-left: 10px;
+
+        &:hover {
+          background-color: #ff5757;
+          color: #fff;
+        }
+      }
+
       button.startGame {
         padding: 11px 20px;
         border: none;
@@ -88,7 +104,6 @@ body {
         color: #fff;
         cursor: pointer;
         transition: 0.3s;
-        display: block;
         margin-top: 20px;
 
         &:hover {

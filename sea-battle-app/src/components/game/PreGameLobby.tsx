@@ -11,15 +11,21 @@ export default function PreGameLobby() {
     const socket = useSocket()
 
     function kick() {
-        if(!playerPresent || !isOwner) return
+        if (!playerPresent || !isOwner) return
 
         socket.emit("kick")
     }
 
     function leaveGame() {
-        if(isOwner) return
+        if (isOwner) return
 
         socket.emit("leave_game")
+    }
+
+    function deleteGame() {
+        if (!isOwner) return
+
+        socket.emit("delete_game")
     }
 
     return (
@@ -37,6 +43,7 @@ export default function PreGameLobby() {
                     </span>
                     <span className={appStyle.nickname}>
                         {game.owner}
+                        {!game.ownerOnline && game.owner && " (offline)"}
                     </span>
                 </div>
                 <div className={appStyle.member}>
@@ -45,12 +52,18 @@ export default function PreGameLobby() {
                     </span>
                     <span className={appStyle.nickname}>
                         {game.player ?? "-"}
+                        {!game.playerOnline && game.player && " (offline)"}
                     </span>
                     {playerPresent && isOwner && <button onClick={kick} className={appStyle.kick}>kick</button>}
                 </div>
-                {isOwner && <button className={appStyle.startGame} disabled={!playerPresent}>
-                    Start game
-                </button>}
+                {isOwner && <div>
+                    <button className={appStyle.startGame} disabled={!playerPresent}>
+                        Start game
+                    </button>
+                    <button className={appStyle.deleteGame} onClick={deleteGame}>
+                        Delete game
+                    </button>
+                </div>}
                 {!isOwner && <button className={appStyle.startGame} onClick={leaveGame}>
                     Leave game
                 </button>}

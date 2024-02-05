@@ -11,6 +11,8 @@ export interface GameState {
     shots: Board | null;
     ownerTurn: boolean;
     winner: string | null;
+    playerOnline?: boolean;
+    ownerOnline?: boolean;
 }
 
 const gameSlice = createSlice({
@@ -33,6 +35,8 @@ const gameSlice = createSlice({
                 shots: payload.shots ?? emptyBoard(),
                 ownerTurn: payload.ownerTurn,
                 winner: payload.winner ?? null,
+                playerOnline: payload.playerOnline ?? false,
+                ownerOnline: payload.ownerOnline ?? false,
             } as GameState;
         },
         updateGameData(state, action) {

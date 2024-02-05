@@ -20,4 +20,6 @@ export interface GamePacket {
     ownerTurn?: boolean;
     board?: Board;
     shots?: Board;
+    playerOnline?: boolean;
+    ownerOnline?: boolean;
 }
