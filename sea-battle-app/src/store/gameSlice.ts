@@ -1,16 +1,15 @@
 import {createSlice} from "@reduxjs/toolkit";
-import {Board, GameStatus} from "@shared/gameTypes.ts";
+import {Board, GamePacket, GameStatus} from "@shared/gameTypes.ts";
 import {emptyBoard} from "../util/gameUtil.ts";
 
 export interface GameState {
     id: string;
     status: GameStatus
-    over: boolean;
-    user: string;
-    opponent: string;
-    board: Board;
-    opponentBoard: Board;
-    turn: boolean;
+    owner: string;
+    player: string | null;
+    board: Board | null;
+    shots: Board | null;
+    ownerTurn: boolean;
     winner: string | null;
 }
 
@@ -19,16 +18,34 @@ const gameSlice = createSlice({
     initialState: null as GameState | null,
     reducers: {
         setGameData(_, action) {
+            if(action.payload === null) {
+                return null;
+            }
+
+            const payload: GamePacket = action.payload;
+
             return {
-                status: "lobby",
-                over: false,
-                opponent: null,
-                winner: null,
-                board: emptyBoard(),
-                opponentBoard: emptyBoard(),
-                turn: false,
-                ...action.payload
-            };
+                id: payload.id,
+                owner: payload.owner,
+                player: payload.player ?? null,
+                status: payload.status,
+                board: payload.board ?? emptyBoard(),
+                shots: payload.shots ?? emptyBoard(),
+                ownerTurn: payload.ownerTurn,
+                winner: payload.winner ?? null,
+            } as GameState;
+        },
+        updateGameData(state, action) {
+            const payload: GamePacket = action.payload;
+
+            if (state === null) {
+                return state;
+            }
+
+            return {
+                ...state,
+                ...payload
+            } as GameState;
         }
     }
 });

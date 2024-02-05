@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/hapi": "^21.3.3",
+    "@types/socket.io": "^3.0.2",
     "joi": "^17.12.1",
     "socket.io": "^4.7.4",
     "ts-node": "^10.9.2",

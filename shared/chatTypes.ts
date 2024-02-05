@@ -3,3 +3,9 @@ export interface ChatMessage {
     type: "system" | "message"
     message: string
 }
+
+export interface Notification {
+    id: number;
+    message: string | null;
+    type: "error" | "success" | "info";
+}

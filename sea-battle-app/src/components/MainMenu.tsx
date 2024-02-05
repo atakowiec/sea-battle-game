@@ -1,20 +1,24 @@
 import appStyle from "../style/app.module.scss"
-import {useDispatch, useSelector} from "react-redux";
+import {useSelector} from "react-redux";
 import {State} from "../store";
-import {useRef} from "react";
+import {useRef, useState} from "react";
 import useSocket from "../socket/useSocket.ts";
-import {Room} from "@shared/gameTypes.ts";
-import {gameActions} from "../store/gameSlice.ts";
 
 export default function MainMenu() {
     const username = useSelector((state: State) => state.user.username)
-    const gameIdRef = useRef(null)
+    const gameIdRef = useRef<HTMLInputElement>(null)
+    const [error, setError] = useState("")
     const socket = useSocket()
-    const dispatch = useDispatch()
 
     function createNewRoom() {
-        socket.emit("create_room", (room: Room) => {
-            dispatch(gameActions.setGameData(room))
+        socket.emit("create_game")
+    }
+
+    function joinRoom() {
+        const gameId = gameIdRef.current!.value
+
+        socket.emit("join_game", gameId, (message: string) => {
+            setError(message)
         })
     }
 
@@ -33,9 +37,12 @@ export default function MainMenu() {
                 </div>
                 <div>
                     <input ref={gameIdRef} placeholder="game id"/>
+                    <div className={appStyle.error}>
+                        {error}
+                    </div>
                 </div>
                 <div>
-                    <button>
+                    <button onClick={joinRoom}>
                         Join game
                     </button>
                 </div>

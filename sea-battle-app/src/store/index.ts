@@ -8,7 +8,7 @@ export interface State {
     user: UserState
     game: GameState
     chat: ChatState
-    notification: Notification[]
+    notifications: Notification[]
 }
 
 export const store = configureStore({
@@ -16,6 +16,6 @@ export const store = configureStore({
         user: userSlice.reducer,
         game: gameSlice.reducer,
         chat: chatSlice.reducer,
-        notification: notificationSlice.reducer
+        notifications: notificationSlice.reducer
     }
 });

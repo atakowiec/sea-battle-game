@@ -1,74 +1,73 @@
 import {Plugin} from "@hapi/hapi/lib/types/plugin";
 import {Server} from "@hapi/hapi/lib/types/server";
-import {SocketType} from "./types.ts";
-import {Room} from "@shared/gameTypes.ts"
+import {InterServerEvents, SocketData, SocketServerType, SocketType} from "./types.ts";
+import {Game} from "./Game.ts";
+import {Server as SocketIOServer} from "socket.io";
+import {ClientToServerEvents, ServerToClientEvents} from "@shared/socketTypes.ts";
 
-let rooms = [] as Room[]
 
 module.exports = {
     name: 'socketHandler',
     version: '1.0.0',
     register: async function (server: Server) {
-        const io = require('socket.io')(server.listener, {
+        const io: SocketServerType = new SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server.listener, {
             cors: {
                 origin: "http://localhost:5173",
             }
         });
 
-        io.on('connection', (socket: SocketType) => {
+        Game.io = io
+
+        io.on('connection', (socket) => {
             console.log(`socket ${socket.id} connected`);
 
-            socket.on("create_room", callback => createRoom(socket, callback))
+            socket.on("create_game", () => Game.createGame(socket))
 
-            socket.on("set_username", (username: string, callback: (error: boolean, message?: string) => void) => {
-                if ([...io.of("/").sockets.values()].find((socket: SocketType) => socket.username === username)) {
-                    console.log(`socket ${socket.id} attempted to use taken username ${username}`)
-                    return callback(true, "Username is taken!")
-                }
+            socket.on("join_game", (id, errorCallback) => joinRoom(socket, id, errorCallback))
 
-                socket.username = username
-                callback(false)
-                console.log(`Set username to ${username} for socket ${socket.id}`)
-            })
+            socket.on("kick", () => socket.data.game?.kick(socket))
+
+            socket.on("leave_game", () => socket.data.game?.leave(socket))
+
+            socket.on("set_username", (username, callback) => setUserName(socket, username, callback))
 
             socket.on('disconnect', () => {
                 console.log(`socket ${socket.id} disconnected`);
+
+                socket.data.game?.onDisconnect(socket)
             });
         });
     }
 } as Plugin<any>
 
-function createRoom(socket: SocketType, callback: (room: Room) => void) {
-    if (!socket.username) {
-        socket.emit("error", "You need to set your username first")
+function setUserName(socket: SocketType, username: string | null, callback: (error: boolean, message?: string) => void) {
+    let otherSocket = [...Game.io.of("/").sockets.values()].find((socket) => socket.data.username === username)
+    if (otherSocket?.connected) {
+        console.log(`socket ${socket.id} attempted to use taken username ${username}`)
+        return callback(true, "Username is taken!")
+    }
+
+    if(otherSocket) {
+        otherSocket.disconnect();
+    }
+
+    socket.data.username = username
+
+    const game = Game.initializedGames.find(game => game.owner.username === username || game.player?.username === username)
+    if(game) {
+        game.reconnect(socket)
+    }
+
+    callback(false)
+    console.log(`Set username to ${username} for socket ${socket.id}`)
+}
+
+function joinRoom(socket: SocketType, id: string, errorCallback: (message: string) => void) {
+    const game = Game.initializedGames.find(game => game.id === id)
+    if (!game) {
+        errorCallback("Game not found")
         return
     }
 
-    if (rooms.find(room => (room.status == "preparing" || room.status == "playing")
-        && (room.owner === socket.username || room.player == socket.username))) {
-
-        // todo handle error event
-        socket.emit("error", "You already have active room, try changing your username")
-        return
-    }
-
-    // remove all rooms of the user
-    rooms = rooms.filter(room => room.owner !== socket.username && room.player !== socket.username)
-
-    let id: string
-    do {
-        id = Math.random().toString(36).substring(7)
-    } while (rooms.find(room => room.id === id))
-
-    const room: Room = {
-        id: id,
-        owner: socket.username,
-        player: null,
-        game: null,
-        status: "lobby"
-    }
-
-    rooms.push(room)
-
-    callback(room)
+    game.join(socket, errorCallback)
 }

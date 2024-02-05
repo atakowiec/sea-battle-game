@@ -2,26 +2,30 @@ import {createContext, MutableRefObject, ReactNode, useEffect, useRef} from "rea
 import io, {Socket} from "socket.io-client";
 import {useDispatch} from "react-redux";
 import {actions} from "../store/userSlice";
-import {actions as notificationActions} from "../store/notificationSlice";
+import {id, notificationActions} from "../store/notificationSlice";
+import {ClientToServerEvents, ServerToClientEvents} from "@shared/socketTypes.ts";
+import {gameActions} from "../store/gameSlice.ts";
 
-export const SocketContext = createContext<MutableRefObject<Socket | null> | null>(null);
+export const SocketContext = createContext<MutableRefObject<Socket<ServerToClientEvents, ClientToServerEvents> | null> | null>(null);
 
 export function SocketProvider({children}: { children?: ReactNode }) {
-    const socketRef = useRef<Socket | null>(null);
+    const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
     const dispatch = useDispatch()
 
     useEffect(() => {
-        const socket = io('http://localhost:3000');
+        const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://localhost:3000');
 
         socketRef.current = socket;
 
         socket.on('connect', () => {
             console.log('connected');
 
-            if (localStorage.getItem("username")) {
+            if (localStorage.getItem("username") && localStorage.getItem("username") !== "null") {
                 // if username has been retrieved from localstorage on first render send id to server
-                socket.emit("set_username", localStorage.getItem("username"), (error: boolean, message?: string) => {
+                socket.emit("set_username", localStorage.getItem("username"), (error, message) => {
                     if (error) {
+                        dispatch(actions.setUsername(""));
+
                         return dispatch(notificationActions.addNotification({
                             type: "error",
                             message: message
@@ -30,7 +34,40 @@ export function SocketProvider({children}: { children?: ReactNode }) {
 
                     dispatch(actions.setUsername(localStorage.getItem("username")))
                 })
+            } else {
+                dispatch(actions.setUsername(null))
             }
+        });
+
+        socket.on("game_updated", (gameData) => dispatch(gameActions.updateGameData(gameData)))
+        socket.on("game_set", (gameData) => {
+            dispatch(gameActions.setGameData(gameData));
+        })
+
+        socket.on('info', (message) => {
+            dispatch(notificationActions.addNotification({
+                type: "info",
+                message: message
+            }))
+
+            const newId = id;
+
+            setTimeout(() => {
+                dispatch(notificationActions.removeNotification(newId))
+            }, 3000)
+        });
+
+        socket.on('error', (message) => {
+            dispatch(notificationActions.addNotification({
+                type: "error",
+                message: message
+            }))
+
+            const newId = id;
+
+            setTimeout(() => {
+                dispatch(notificationActions.removeNotification(newId))
+            }, 3000)
         });
 
         socket.on('disconnect', () => {
@@ -39,8 +76,9 @@ export function SocketProvider({children}: { children?: ReactNode }) {
 
         return () => {
             socket.disconnect()
+            socket.offAny()
         }
-    }, []);
+    }, [dispatch]);
 
     return (
         <SocketContext.Provider value={socketRef}>

@@ -5,6 +5,48 @@ body {
   background-color: #f5f5f5;
 }
 
+.notificationsBox {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  .notification {
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+    background-color: #fff;
+    color: #000025;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 300px;
+
+    &.error {
+      background-color: #ffabab;
+      color: #212121;
+    }
+
+    &.info {
+      background-color: #d4d4ff;
+      color: #212121;
+    }
+
+    .close {
+      cursor: pointer;
+      transition: 0.3s;
+
+      &:hover {
+        color: red;
+      }
+    }
+  }
+}
+
 .centeredContainer {
   position: fixed;
   top: 0;
@@ -26,6 +68,71 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+
+    &.preGameLobby {
+      padding: 50px;
+
+      h1 {
+        margin: 0 40px;
+      }
+
+      .h5 {
+        margin-bottom: 20px;
+      }
+
+      button.startGame {
+        padding: 11px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #000025;
+        color: #fff;
+        cursor: pointer;
+        transition: 0.3s;
+        display: block;
+        margin-top: 20px;
+
+        &:hover {
+          background-color: #000035;
+          color: #fff;
+        }
+
+        &:disabled {
+          background-color: #999;
+          color: #fff;
+          cursor: not-allowed;
+        }
+      }
+
+      .member {
+        width: 100%;
+        padding: 8px 14px;
+        border-radius: 5px;
+        border: 1px solid #212121;
+        margin-bottom: 10px;
+
+        button.kick {
+          padding: 5px 10px;
+          border-radius: 5px;
+          border: 1px solid #000025;
+          color: #000025;
+          cursor: pointer;
+          transition: 0.3s;
+          margin-left: 10px;
+
+          &:hover {
+            background-color: #000025;
+            color: #fff;
+          }
+        }
+
+        .rank {
+          margin-right: 10px;
+          padding-right: 10px;
+          border-right: 1px solid #999;
+          color: #999;
+        }
+      }
+    }
 
     &.preGameMenu {
       h1 {
@@ -49,6 +156,14 @@ body {
         margin-right: 10px;
       }
 
+      .error {
+        color: red;
+        font-size: 14px;
+        text-align: center;
+        margin-bottom: 15px;
+        margin-top: -5px;
+      }
+
       button {
         padding: 11px 20px;
         border: none;
@@ -69,7 +184,6 @@ body {
     &.enterUsernameBox {
       .inputBox {
         input {
-          width: 100%;
           padding: 10px;
           margin-bottom: 10px;
           border: 1px solid #000025;

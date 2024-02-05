@@ -9,7 +9,7 @@ function App() {
     const user = useSelector((state: State) => state.user)
     const currentGame = useSelector((state: State) => state.game)
 
-    if(!user.usernameChecked)
+    if (!user.usernameChecked)
         return;
 
     if (!user.username)

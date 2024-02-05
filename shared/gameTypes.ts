@@ -7,25 +7,17 @@ export type Board = BoardCell[][]
 
 export type GameStatus = 'lobby' | 'preparing' | 'playing' | 'finished';
 
-export interface Game {
-    owner: {
-        username: string;
-        board: Board;
-        shots: Board;
-    }
-    player: {
-        username: string;
-        board: Board;
-        shots: Board;
-    }
-    turn: string;
-    winner?: string;
-}
-
-export interface Room {
-    id: string;
-    owner: string;
-    player: string | null;
-    status: GameStatus;
-    game: Game | null;
+/**
+ * GamePacket is the type of the object that is sent to the client
+ * It contains all the information about the game that the client needs
+ */
+export interface GamePacket {
+    id?: string;
+    owner?: string;
+    player?: string | null;
+    status?: GameStatus;
+    winner?: string | null;
+    ownerTurn?: boolean;
+    board?: Board;
+    shots?: Board;
 }
