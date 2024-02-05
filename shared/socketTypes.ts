@@ -19,6 +19,13 @@ export interface ClientToServerEvents {
     leave_game: () => void
     set_username: (username: string | null, callback: (error: boolean, message?: string) => void) => void
     delete_game: () => void
+    start_game: () => void
+    set_settings: (settings: SettingsType) => void
+}
+
+export interface SettingsType {
+    shipWrappingAllowed?: boolean,
+    cornerCollisionsAllowed?: boolean
 }
 
 export type ClientToServerEventsKeys = keyof ClientToServerEvents

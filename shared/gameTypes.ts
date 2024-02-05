@@ -3,7 +3,7 @@ export interface BoardCell {
     hit: boolean;
 }
 
-export type Board = BoardCell[][]
+export type BoardType = BoardCell[][]
 
 export type GameStatus = 'lobby' | 'preparing' | 'playing' | 'finished';
 
@@ -18,8 +18,10 @@ export interface GamePacket {
     status?: GameStatus;
     winner?: string | null;
     ownerTurn?: boolean;
-    board?: Board;
-    shots?: Board;
+    board?: BoardType;
+    shots?: BoardType;
     playerOnline?: boolean;
     ownerOnline?: boolean;
+    shipWrappingAllowed?: boolean;
+    cornerCollisionsAllowed?: boolean;
 }

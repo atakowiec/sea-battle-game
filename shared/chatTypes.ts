@@ -7,5 +7,5 @@ export interface ChatMessage {
 export interface Notification {
     id: number;
     message: string | null;
-    type: "error" | "success" | "info";
+    type: "error" | "info";
 }

@@ -2,7 +2,8 @@ import {configureStore} from "@reduxjs/toolkit";
 import userSlice, {UserState} from "./userSlice";
 import gameSlice, {GameState} from "./gameSlice";
 import chatSlice, {ChatState} from "./chatSlice.ts";
-import notificationSlice, {Notification} from "./notificationSlice.ts";
+import notificationSlice from "./notificationSlice.ts";
+import {Notification} from "@shared/chatTypes.ts";
 
 export interface State {
     user: UserState

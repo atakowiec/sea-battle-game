@@ -1,12 +1,13 @@
-import {Board, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
 import {SocketServerType, SocketType} from "./types.ts";
-import {ServerToClientEventsKeys, ServerToClientEventsValues} from "@shared/socketTypes.ts";
+import {ServerToClientEventsKeys, ServerToClientEventsValues, SettingsType} from "@shared/socketTypes.ts";
+import {emptyBoard} from "../util/gameUtil.ts";
 
 export interface GameMember {
     username: string;
     socket: SocketType
-    board?: Board;
-    shots?: Board;
+    board?: BoardType;
+    shots?: BoardType;
 }
 
 export class Game {
@@ -22,6 +23,8 @@ export class Game {
     status: GameStatus;
     ownerTurn: boolean;
     winner: string | null;
+    cornerCollisionsAllowed: boolean;
+    shipWrappingAllowed: boolean;
 
     constructor(id: string, owner: SocketType) {
         this.id = id;
@@ -33,6 +36,8 @@ export class Game {
         this.status = "lobby";
         this.ownerTurn = Math.random() > 0.5;
         this.winner = null;
+        this.cornerCollisionsAllowed = false;
+        this.shipWrappingAllowed = false;
     }
 
     static createGame(owner: SocketType) {
@@ -56,6 +61,24 @@ export class Game {
             return false;
         }
         return true
+    }
+
+    setSettings(socket: SocketType, settings: SettingsType) {
+        if (!Game.checkUsername(socket)) return;
+        if (!this.checkAdmin(socket)) return;
+
+        if (settings.shipWrappingAllowed !== undefined) {
+            this.shipWrappingAllowed = settings.shipWrappingAllowed;
+        }
+
+        if (settings.cornerCollisionsAllowed !== undefined) {
+            this.cornerCollisionsAllowed = settings.cornerCollisionsAllowed;
+        }
+
+        this.emitPlayer("game_updated", {
+            shipWrappingAllowed: this.shipWrappingAllowed,
+            cornerCollisionsAllowed: this.cornerCollisionsAllowed
+        })
     }
 
     remove() {
@@ -105,6 +128,23 @@ export class Game {
         return true
     }
 
+    startGame(socket: SocketType) {
+        if (!Game.checkUsername(socket)) return;
+        if (!this.checkAdmin(socket)) return;
+        if (!this.player) {
+            socket.emit("error", "The game is not full yet");
+            return;
+        }
+
+        this.status = "preparing";
+        this.player.board = emptyBoard()
+        this.owner.board = emptyBoard()
+        this.player.shots = emptyBoard()
+        this.owner.shots = emptyBoard()
+
+        this.emitGameChange();
+    }
+
     deleteGame(socket: SocketType) {
         if (!Game.checkUsername(socket)) return;
         if (!this.checkAdmin(socket)) return;
@@ -125,6 +165,8 @@ export class Game {
             shots: member.shots,
             playerOnline: !this.player?.socket.disconnected,
             ownerOnline: !this.owner.socket.disconnected,
+            shipWrappingAllowed: this.shipWrappingAllowed,
+            cornerCollisionsAllowed: this.cornerCollisionsAllowed
         }
     }
 
@@ -289,7 +331,12 @@ export class Game {
     }
 
 
-    emitGameChange(packet: GamePacket) {
-        this.emit("game_updated", packet);
+    emitGameChange(packet?: GamePacket) {
+        if (!packet) {
+            this.emitPlayer("game_set", this.getPacket(this.player!))
+            this.emitOwner("game_set", this.getPacket(this.owner))
+        } else {
+            this.emit("game_updated", packet);
+        }
     }
 }

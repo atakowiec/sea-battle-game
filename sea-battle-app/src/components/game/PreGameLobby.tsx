@@ -1,7 +1,8 @@
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {State} from "../../store";
 import appStyle from "../../style/app.module.scss"
 import useSocket from "../../socket/useSocket.ts";
+import {gameActions} from "../../store/gameSlice.ts";
 
 export default function PreGameLobby() {
     const game = useSelector((state: State) => state.game)
@@ -9,6 +10,21 @@ export default function PreGameLobby() {
     const playerPresent = game.player != null
     const isOwner = game.owner === user.username
     const socket = useSocket()
+    const dispatch = useDispatch()
+
+    function onCornerCollisionsChange() {
+        if (!isOwner) return
+
+        dispatch(gameActions.changeSetting({cornerCollisionsAllowed: !game.cornerCollisionsAllowed}))
+        socket.emit("set_settings", {cornerCollisionsAllowed: !game.cornerCollisionsAllowed})
+    }
+
+    function onShipWrappingChange() {
+        if (!isOwner) return
+
+        dispatch(gameActions.changeSetting({shipWrappingAllowed: !game.shipWrappingAllowed}))
+        socket.emit("set_settings", {shipWrappingAllowed: !game.shipWrappingAllowed})
+    }
 
     function kick() {
         if (!playerPresent || !isOwner) return
@@ -26,6 +42,12 @@ export default function PreGameLobby() {
         if (!isOwner) return
 
         socket.emit("delete_game")
+    }
+
+    function startGame() {
+        if (!isOwner || !playerPresent) return
+
+        socket.emit("start_game")
     }
 
     return (
@@ -56,8 +78,26 @@ export default function PreGameLobby() {
                     </span>
                     {playerPresent && isOwner && <button onClick={kick} className={appStyle.kick}>kick</button>}
                 </div>
+                <div>
+                    <label>
+                        <input type={"checkbox"}
+                               checked={game.shipWrappingAllowed}
+                               onChange={onShipWrappingChange}
+                               disabled={!isOwner}/>
+                        Allow corner collisions
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type={"checkbox"}
+                               checked={game.cornerCollisionsAllowed}
+                               onChange={onCornerCollisionsChange}
+                               disabled={!isOwner}/>
+                        Allow ship wrapping
+                    </label>
+                </div>
                 {isOwner && <div>
-                    <button className={appStyle.startGame} disabled={!playerPresent}>
+                    <button className={appStyle.startGame} disabled={!playerPresent} onClick={startGame}>
                         Start game
                     </button>
                     <button className={appStyle.deleteGame} onClick={deleteGame}>

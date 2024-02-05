@@ -31,6 +31,10 @@ module.exports = {
 
             socket.on("delete_game", () => socket.data.game?.deleteGame(socket))
 
+            socket.on("start_game", () => socket.data.game?.startGame(socket))
+
+            socket.on("set_settings", (settings) => socket.data.game?.setSettings(socket, settings))
+
             socket.on("set_username", (username, callback) => setUserName(socket, username, callback))
 
             socket.on('disconnect', () => {
@@ -49,14 +53,14 @@ function setUserName(socket: SocketType, username: string | null, callback: (err
         return callback(true, "Username is taken!")
     }
 
-    if(otherSocket) {
+    if (otherSocket) {
         otherSocket.disconnect();
     }
 
     socket.data.username = username
 
     const game = Game.initializedGames.find(game => game.owner.username === username || game.player?.username === username)
-    if(game) {
+    if (game) {
         game.reconnect(socket)
     }
 
