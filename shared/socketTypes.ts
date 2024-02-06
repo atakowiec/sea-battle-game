@@ -1,4 +1,4 @@
-import {GamePacket} from "./gameTypes";
+import {GamePacket, PlaceShipsPacket} from "./gameTypes";
 
 export interface ServerToClientEvents {
     game_updated: (game: GamePacket) => void
@@ -21,6 +21,7 @@ export interface ClientToServerEvents {
     delete_game: () => void
     start_game: () => void
     set_settings: (settings: SettingsType) => void
+    place_ships: (ships: PlaceShipsPacket) => void
 }
 
 export interface SettingsType {

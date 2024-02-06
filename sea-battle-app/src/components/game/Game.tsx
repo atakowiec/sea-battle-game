@@ -1,9 +1,10 @@
 import {State} from "../../store";
 import {useDispatch, useSelector} from "react-redux";
 import gameStyle from "../../style/game.module.scss"
-import {BoardCell} from "@shared/gameTypes.ts";
+import {BoardCell, BoardType, PlaceShipsPacket} from "@shared/gameTypes.ts";
 import {gameActions, GameState} from "../../store/gameSlice.ts";
 import {useEffect, useState} from "react";
+import useSocket from "../../socket/useSocket.ts";
 
 interface Position {
     x: number
@@ -34,20 +35,62 @@ function Board({yourBoard}: { yourBoard: boolean }) {
     const game = useSelector((state: State) => state.game)
     const board = yourBoard ? game.board! : game.shots!
     const dispatch = useDispatch()
+    const socket = useSocket()
     const [wrongPlacement, setWrongPlacement] =
         useState(Array.from({length: 10}, () => Array(10).fill(false)) as boolean[][])
 
+    const [lastSavedBoard, setLastSavedBoard] = useState(board as BoardType)
+    const [debouncedBoardState, setDebouncedBoardState] = useState(false)
+
     const onClick = (x: number, y: number) => {
         if (yourBoard) {
+            if (game.status !== 'preparing') return;
+
             dispatch(gameActions.placeShip({x, y}))
         } else {
+            if (game.status !== "playing" || !game.yourTurn) return;
+
             dispatch(gameActions.shoot({x, y}))
         }
     }
 
     useEffect(() => {
         checkBoard()
+        if (!yourBoard) return;
+        let timer: NodeJS.Timeout;
+
+        const debounceState = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                setDebouncedBoardState(prevState => !prevState);
+            }, 2000);
+        };
+        debounceState();
+
+        return () => clearTimeout(timer);
     }, [board])
+
+    useEffect(() => {
+        sendPlacedShips();
+    }, [debouncedBoardState]);
+
+    function sendPlacedShips() {
+        const changes = [] as PlaceShipsPacket
+
+        lastSavedBoard.forEach((row, x) => {
+            row.forEach((cell, y) => {
+                const boardCell = board[x][y];
+                if (cell.ship !== boardCell.ship) {
+                    changes.push({x, y, ship: boardCell.ship, hit: boardCell.hit})
+                }
+            })
+        });
+
+        if (changes.length === 0) return;
+
+        setLastSavedBoard(board)
+        socket.emit("place_ships", changes)
+    }
 
     function checkBoard() {
         const ships = [] as Ship[]
@@ -111,7 +154,7 @@ function Board({yourBoard}: { yourBoard: boolean }) {
         setWrongPlacement(newWrongPlacement)
 
         // Count ships of each type
-        const shipTypes : { [key: number]: number } = {}
+        const shipTypes: { [key: number]: number } = {}
         ships.forEach(ship => {
             if (wrongShips.includes(ship)) return
 

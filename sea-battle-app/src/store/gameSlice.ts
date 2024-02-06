@@ -1,5 +1,6 @@
 import {createSlice} from "@reduxjs/toolkit";
 import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import useSocket from "../socket/useSocket.ts";
 
 export interface GameState {
     id: string;

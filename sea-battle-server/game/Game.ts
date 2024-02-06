@@ -1,4 +1,4 @@
-import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {BoardType, GamePacket, GameStatus, PlaceShipsPacket} from "@shared/gameTypes.ts";
 import {SocketServerType, SocketType} from "./types.ts";
 import {ServerToClientEventsKeys, ServerToClientEventsValues, SettingsType} from "@shared/socketTypes.ts";
 import {emptyBoard} from "../util/gameUtil.ts";
@@ -79,6 +79,41 @@ export class Game {
             shipWrappingAllowed: this.shipWrappingAllowed,
             cornerCollisionsAllowed: this.cornerCollisionsAllowed
         })
+    }
+
+    placeShips(socket: SocketType, ships: PlaceShipsPacket) {
+        if (!ships || !ships.length)
+            return;
+
+        let board: BoardType | undefined = undefined;
+        if (socket === this.owner.socket)
+            board = this.owner.board;
+        else if (socket === this.player?.socket)
+            board = this.player.board;
+        if (!board)
+            return;
+
+        const emitBoard = () => {
+            if (board)
+                socket.emit("game_updated", {board: board})
+        }
+
+        if (!Game.checkUsername(socket)) {
+            emitBoard();
+            return;
+        }
+
+        if (this.status !== "preparing") {
+            socket.emit("error", "The game has already started");
+            emitBoard();
+            return;
+        }
+
+        ships.forEach(cell => {
+            board![cell.x][cell.y].ship = cell.ship;
+        })
+
+        // do not send it back, client already has it because he sent it lol
     }
 
     remove() {

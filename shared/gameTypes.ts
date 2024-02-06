@@ -25,3 +25,12 @@ export interface GamePacket {
     shipWrappingAllowed?: boolean;
     cornerCollisionsAllowed?: boolean;
 }
+
+export interface ChangedCell {
+    x: number;
+    y: number;
+    hit: boolean;
+    ship: boolean;
+}
+
+export type PlaceShipsPacket = ChangedCell[];
