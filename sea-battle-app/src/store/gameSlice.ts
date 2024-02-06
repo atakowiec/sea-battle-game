@@ -1,6 +1,5 @@
 import {createSlice} from "@reduxjs/toolkit";
 import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
-import {useDispatch} from "react-redux";
 
 export interface GameState {
     id: string;

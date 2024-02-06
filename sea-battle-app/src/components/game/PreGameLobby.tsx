@@ -84,7 +84,7 @@ export default function PreGameLobby() {
                                checked={game.shipWrappingAllowed}
                                onChange={onShipWrappingChange}
                                disabled={!isOwner}/>
-                        Allow corner collisions
+                        Allow ship wrapping
                     </label>
                 </div>
                 <div>
@@ -93,7 +93,7 @@ export default function PreGameLobby() {
                                checked={game.cornerCollisionsAllowed}
                                onChange={onCornerCollisionsChange}
                                disabled={!isOwner}/>
-                        Allow ship wrapping
+                        Allow corner collisions
                     </label>
                 </div>
                 {isOwner && <div>
