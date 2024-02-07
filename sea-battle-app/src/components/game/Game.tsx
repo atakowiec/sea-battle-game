@@ -1,25 +1,31 @@
 import {State} from "../../store";
 import {useDispatch, useSelector} from "react-redux";
 import gameStyle from "../../style/game.module.scss"
-import {BoardCell, ChangedCell, GameStatus} from "@shared/gameTypes.ts";
+import {BoardCell, ChangedCell, GameStatus, Ship, Position, BoardType} from "@shared/gameTypes.ts";
 import {gameActions, GameState} from "../../store/gameSlice.ts";
 import {useEffect, useState} from "react";
 import useSocket from "../../socket/useSocket.ts";
+import {notificationActions} from "../../store/notificationSlice.ts";
 
-interface Position {
-    x: number
-    y: number
-}
-
-type Ship = Position[]
-
-const falseMatrix = () => Array.from({length: 10}, () => Array(10).fill(false))
+const falseMatrix: () => boolean[][] = () => Array.from({length: 10}, () => Array(10).fill(false))
 
 export default function Game() {
     const game = useSelector((state: State) => state.game)
     const board = game.board!
     const [shipCounts, setShipCounts] = useState({} as { [key: number]: number })
     const [wrongPlacement, setWrongPlacement] = useState(falseMatrix())
+    const socket = useSocket()
+    const dispatch = useDispatch()
+
+    useEffect(() => {
+        socket.on("send_cell_change", (changedCell: ChangedCell[], yourBoard: boolean) => {
+            dispatch(gameActions.changeCells({changedCell, yourBoard}))
+        });
+
+        return () => {
+            console.log("unmount")
+        }
+    }, []);
 
     function checkBoard() {
         const ships = getBoardShips()
@@ -122,7 +128,7 @@ export default function Game() {
 
             ship.push({x: x, y})
 
-            const neighbors = getCellNeighbors(x, y, board)
+            const neighbors = getCellNeighborsPresence(x, y, board)
             if (neighbors.top) {
                 checkNeighbors(ship, x - 1, y)
             }
@@ -147,7 +153,7 @@ export default function Game() {
             <div className={gameStyle.box}>
                 <MyBoard wrongPlacement={wrongPlacement}/>
                 <div className={gameStyle.centerBox}>
-                    <GameInfo game={game} shipCounts={shipCounts}/>
+                    <GameInfo game={game} shipCounts={shipCounts} wrongPlacement={wrongPlacement}/>
                     <Chat/>
                 </div>
                 <OpponentBoard/>
@@ -159,6 +165,17 @@ export default function Game() {
 function OpponentBoard() {
     const game = useSelector((state: State) => state.game)
     const board = game.shots!
+    const socket = useSocket()
+
+    function onClick(x: number, y: number) {
+        if (game.status !== "playing") return
+        if (!game.yourTurn) return
+
+        const cell = board[x][y]
+        if (cell.hit) return
+
+        socket.emit("send_shot", x, y)
+    }
 
     return (
         <div className={gameStyle.board}>
@@ -175,7 +192,7 @@ function OpponentBoard() {
                 <div key={i} className={gameStyle.row}>
                     <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}> {String.fromCharCode(65 + i)}</div>
                     {row.map((cell, j) => (
-                        <Cell key={j} cell={cell} x={i} y={j}/>
+                        <Cell key={j} cell={cell} x={i} y={j} click={() => onClick(i, j)} board={board}/>
                     ))}
                 </div>
             ))}
@@ -222,7 +239,8 @@ function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
                     <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}> {String.fromCharCode(65 + i)}</div>
                     {row.map((cell, j) => (
                         <Cell key={j} cell={cell} x={i} y={j} click={() => onClick(i, j)}
-                              placedWrong={wrongPlacement[i][j]}/>
+                              placedWrong={wrongPlacement[i][j]}
+                              board={board}/>
                     ))}
                 </div>
             ))}
@@ -230,20 +248,18 @@ function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
     )
 }
 
-function Cell({cell, click, x, y, placedWrong}: {
+function Cell({cell, click, x, y, placedWrong, board}: {
+    board: BoardType,
     cell: BoardCell,
     click?: () => void,
     x: number,
     y: number,
     placedWrong?: boolean
 }) {
-    const game = useSelector((state: State) => state.game)
-    const board = game.board!
-    const neighbors = getCellNeighbors(x, y, board)
+    const neighbors = getCellNeighborsPresence(x, y, board)
 
     return (
         <div className={gameStyle.cell} onClick={click ? click : undefined}>
-            {cell.hit && <div className={gameStyle.hit}/>}
             {cell.ship &&
                 <div className={`${gameStyle.ship} ${placedWrong && gameStyle.wrongPlaced}`}>
                     <div className={`${gameStyle.shipPart} ${neighbors.top && gameStyle.top}`}/>
@@ -252,9 +268,9 @@ function Cell({cell, click, x, y, placedWrong}: {
                     <div className={`${gameStyle.shipPart} ${neighbors.left && gameStyle.left}`}/>
                     <div className={`${gameStyle.shipPart} ${gameStyle.center}`}/>
                 </div>}
+            {cell.hit && <div className={gameStyle.hit}/>}
         </div>
     )
-
 }
 
 function Chat() {
@@ -267,18 +283,22 @@ function Chat() {
     )
 }
 
-function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: number]: number } }) {
-    let shipsPlacedCorrectly = true
+function GameInfo({game, shipCounts, wrongPlacement}: {
+    game: GameState,
+    shipCounts: { [_: number]: number },
+    wrongPlacement: boolean[][]
+}) {
     const socket = useSocket()
     const username = useSelector((state: State) => state.user.username)
     const playerData = useSelector((state: State) => state.game.owner.username === username ? state.game.owner : state.game.player)
+    const dispatch = useDispatch()
 
     function translateStatus(status: GameStatus) {
         switch (status) {
             case "lobby":
                 return "In lobby"
             case "playing":
-                return "Playing game"
+                return game.yourTurn ? "Your turn" : "Opponent's turn"
             case "finished":
                 return "Game finished"
             case "preparing":
@@ -288,7 +308,26 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
         }
     }
 
+    function startShooting() {
+        if (!game.player?.ready || !game.owner.ready) return
+
+        socket.emit("start_shooting")
+    }
+
     function ready() {
+        let anyWrong = false
+        for (const row of wrongPlacement) {
+            if (row.some(cell => cell)) {
+                anyWrong = true
+                break
+            }
+        }
+
+        if (anyWrong) {
+            dispatch(notificationActions.addNotification({message: "Your ships are placed incorrectly", type: "error"}))
+            return
+        }
+
         socket.emit("toggle_ready")
     }
 
@@ -322,7 +361,7 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
             </div>
             <div className={gameStyle.infoBox}>
                 <h2>
-                    Game status
+                    Game stage
                 </h2>
                 <div className={gameStyle.status}>
                     {translateStatus(game.status)}
@@ -330,11 +369,8 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
             </div>
             {game.status === "preparing" && <div className={gameStyle.infoBox}>
                 <h2>Required ships</h2>
-                {Object.keys(game.requiredShips).map((key: any) => {
+                {(Object.keys(game.requiredShips) as unknown as number[]).map((key) => {
                     const needShips = game.requiredShips[key] - (shipCounts[key] || 0)
-
-                    if (needShips != 0)
-                        shipsPlacedCorrectly = false
 
                     return (
                         <div key={key}
@@ -343,7 +379,7 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
                                 {shipCounts[key] ?? 0} / {game.requiredShips[key]}
                             </div>
                             <div className={gameStyle.preview}>
-                                {Array.from({length: parseInt(key)}, (_, index) => (
+                                {Array.from({length: key}, (_, index) => (
                                     <div className={`${gameStyle.part}`} key={"part-" + key + "-" + index}></div>
                                 ))}
                             </div>
@@ -351,14 +387,20 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
                     )
                 })}
 
-                {shipsPlacedCorrectly && <button className={gameStyle.button}
-                                                 onClick={ready}>{playerData?.ready ? "Not ready" : "Ready"}</button>}
+                {username === game.owner.username &&
+                    <button className={`${gameStyle.startGameButton} ${gameStyle.button}`} onClick={startShooting}
+                            disabled={!game.player?.ready || !game.owner.ready}>
+                        Start game
+                    </button>}
+
+                {<button className={gameStyle.button}
+                         onClick={ready}>{playerData?.ready ? "Not ready" : "Ready"}</button>}
             </div>}
         </div>
     )
 }
 
-function getCellNeighbors(x: number, y: number, board: BoardCell[][]) {
+function getCellNeighborsPresence(x: number, y: number, board: BoardCell[][]) {
     return {
         top: x > 0 && board[x - 1][y].ship,
         right: y < 9 && board[x][y + 1].ship,

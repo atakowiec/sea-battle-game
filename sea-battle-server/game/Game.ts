@@ -1,7 +1,7 @@
 import {BoardType, ChangedCell, GamePacket, GameStatus, OpenGame} from "@shared/gameTypes.ts";
 import {SocketServerType, SocketType} from "./types.ts";
 import {ServerToClientEventsKeys, ServerToClientEventsValues, SettingsType} from "@shared/socketTypes.ts";
-import {emptyBoard} from "../util/gameUtil.ts";
+import {emptyBoard, getBoardInfo, getCellNeighborCells, getShip} from "../util/gameUtil.ts";
 import OpenGamesHandler from "./OpenGamesHandler.ts";
 
 export interface GameMember {
@@ -76,6 +76,39 @@ export class Game {
         return true
     }
 
+    getGameMember(socket: SocketType) {
+        if (this.owner.socket === socket) {
+            return this.owner;
+        } else if (this.player?.socket === socket) {
+            return this.player;
+        }
+
+        // it should never get here but just in case
+        socket.data.game = null;
+        socket.emit("game_set", null)
+        socket.emit("error", "You are not in this game");
+        return null;
+    }
+
+    checkShips(player: GameMember): boolean {
+        const boardInfo = getBoardInfo(player.board!, this.getPacket(player));
+
+        if (boardInfo.wrongShips.length > 0) {
+            player.socket.emit("error", "Some ships are placed incorrectly");
+            return false;
+        }
+
+        // check if the player has all the required ships
+        for (const [length, count] of Object.entries(this.requiredShips)) {
+            if (boardInfo.shipCounts[parseInt(length)] !== count) {
+                player.socket.emit("error", `You need ${count} ships of length ${length}`);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     setSettings(socket: SocketType, settings: SettingsType) {
         if (!Game.checkUsername(socket)) return;
         if (!this.checkAdmin(socket)) return;
@@ -142,6 +175,115 @@ export class Game {
         // do not send it back, client already has it because he sent it lol
     }
 
+    checkWin(member: GameMember) {
+        const opponent = member === this.owner ? this.player! : this.owner;
+
+        if (opponent.board!.every(row => row.every(cell => !cell.ship || cell.hit))) {
+            this.win(member)
+        }
+    }
+
+    win(member: GameMember) {
+        this.winner = member.username;
+        this.status = "finished";
+        this.emitGameChange({
+            status: this.status,
+            winner: this.winner
+        });
+    }
+
+    sendShot(socket: SocketType, x: number, y: number) {
+        if (!Game.checkUsername(socket)) return;
+        const shooter = this.getGameMember(socket);
+        if (!shooter) return;
+
+        // some checks
+        if (this.status !== "playing") return;
+        if (this.ownerTurn && socket !== this.owner.socket) return;
+        if (!this.ownerTurn && socket !== this.player?.socket) return;
+
+        const target = this.ownerTurn ? this.player! : this.owner;
+        // if the cell is already hit, do nothing
+        if (target?.board![x][y].hit) return;
+
+        // change target's board
+        target!.board![x][y].hit = true;
+
+        // change shooter's shots board
+        shooter.shots![x][y].hit = true;
+        shooter.shots![x][y].ship = target.board![x][y].ship;
+
+        // send the hit cell to the target
+        target.socket.emit("send_cell_change", [{x, y, hit: true, ship: target.board![x][y].ship}], true);
+
+        // if the ship is sunk send all the neighbors as hit cells, respecting the board boundaries and game settings
+        const shooterChanges = [{x, y, hit: true, ship: target.board![x][y].ship}]
+        const ship = getShip(target.board!, {x, y});
+
+        // check if the ship is sunk
+        if (ship && ship.every(cell => cell.hit)) {
+            // iterate over the ship cells
+            for (const cell of ship) {
+                const cellNeighbors = getCellNeighborCells(cell.x, cell.y, target.board!, !this.cornerCollisionsAllowed);
+
+                // iterate over the neighbors and add them to the changes
+                for (const neighbor of cellNeighbors) {
+                    // if the neighbor is not already hit and not already in the changes array
+                    if (!neighbor.ship && !neighbor.hit && !shooterChanges.some(pos => pos.x === neighbor.x && pos.y === neighbor.y)) {
+                        // if any neighbor should be mark as hit, add it to the changes and change the shooter's shots board
+                        shooterChanges.push({
+                            x: neighbor.x,
+                            y: neighbor.y,
+                            hit: true,
+                            ship: target.board![neighbor.x][neighbor.y].ship
+                        })
+
+                        shooter.shots![neighbor.x][neighbor.y].hit = true;
+                    }
+                }
+            }
+        }
+
+        // send the changes to the shooter
+        shooter.socket.emit("send_cell_change", shooterChanges, false);
+
+        if (!target.board![x][y].ship) {
+            this.ownerTurn = !this.ownerTurn;
+            this.emitOwner("game_updated", {
+                yourTurn: this.ownerTurn
+            })
+
+            this.emitPlayer("game_updated", {
+                yourTurn: !this.ownerTurn
+            })
+        }
+
+        this.checkWin(shooter);
+    }
+
+    startShooting(socket: SocketType) {
+        if (!Game.checkUsername(socket)) return;
+        if (!this.checkAdmin(socket)) return;
+
+        if (this.status !== "preparing") return;
+
+        if (!this.owner.ready || !this.player?.ready) {
+            socket.emit("error", "Both players need to be ready");
+            return;
+        }
+
+        this.status = "playing";
+        this.ownerTurn = Math.random() > 0.5;
+        this.emitPlayer("game_updated", {
+            status: this.status,
+            yourTurn: !this.ownerTurn
+        });
+        this.emitOwner("game_updated", {
+            status: this.status,
+            yourTurn: this.ownerTurn
+        });
+    }
+
     remove() {
         this.emitPlayer("game_set", null);
         this.emitOwner("game_set", null);
@@ -206,6 +348,8 @@ export class Game {
         this.owner.board = emptyBoard()
         this.player.shots = emptyBoard()
         this.owner.shots = emptyBoard()
+
+        OpenGamesHandler.instance.onGameStart(this);
 
         this.emitGameChange();
     }
@@ -378,25 +522,21 @@ export class Game {
     }
 
     toggleReady(socket: SocketType) {
-        if (this.owner.socket === socket) {
-            this.owner.ready = !this.owner.ready;
-            this.emitGameChange({
-                owner: {
-                    ready: this.owner.ready
-                }
-            })
-        } else if (this.player?.socket === socket) {
-            this.player.ready = !this.player.ready;
-            this.emitGameChange({
-                player: {
-                    ready: this.player.ready
-                }
-            })
-        } else {
-            socket.emit("game_set", null)
-            socket.emit("error", "You are not in this game");
+        const gameMember = this.getGameMember(socket);
+        if (!gameMember) return;
+
+        if (!this.checkShips(gameMember))
             return;
-        }
+
+        gameMember.ready = !gameMember.ready;
+        this.emitGameChange({
+            owner: {
+                ready: this.owner.ready
+            },
+            player: this.player ? {
+                ready: this.player.ready
+            } : undefined
+        })
     }
 
     onDisconnect(socket: SocketType) {

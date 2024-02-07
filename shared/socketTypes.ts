@@ -9,6 +9,7 @@ export interface ServerToClientEvents {
     set_open_games: (openGames: OpenGame[]) => void
     add_open_game: (openGame: OpenGame) => void
     remove_open_game: (id: string) => void
+    send_cell_change: (cells: ChangedCell[], yourBoard: boolean) => void
 }
 
 export type ServerToClientEventsKeys = keyof ServerToClientEvents
@@ -26,6 +27,8 @@ export interface ClientToServerEvents {
     set_settings: (settings: SettingsType) => void
     place_ships: (ship: ChangedCell) => void
     toggle_ready: () => void
+    start_shooting: () => void
+    send_shot: (x: number, y: number) => void
 }
 
 export interface SettingsType {

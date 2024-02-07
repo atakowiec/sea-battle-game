@@ -3,7 +3,7 @@
 const init = async () => {
     const Hapi = require('@hapi/hapi');
     const server = Hapi.server({
-        address: 'localhost',
+        address: '192.168.0.164',
         port: 3000,
     });
 

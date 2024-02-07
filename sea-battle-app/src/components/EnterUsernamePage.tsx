@@ -19,10 +19,6 @@ export default function EnterUsernamePage() {
         if (input.length > 16)
             return setError("Username is too long!")
 
-        if (!/^[A-Za-z0-9]+$/.test(input))
-            return setError("Only letters and numbers are allowed!")
-
-
         socket.emit("set_username", input, (error: boolean, message?: string) => {
             if (error)
                 return setError(message!)

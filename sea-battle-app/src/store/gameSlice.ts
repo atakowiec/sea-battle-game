@@ -1,5 +1,5 @@
 import {createSlice} from "@reduxjs/toolkit";
-import {BoardType, GameMemberData, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {BoardType, ChangedCell, GameMemberData, GamePacket, GameStatus} from "@shared/gameTypes.ts";
 
 export interface GameState {
     id: string;
@@ -51,14 +51,14 @@ const gameSlice = createSlice({
 
             console.log("Updating game data", payload)
 
-            if(payload.player) {
+            if (payload.player) {
                 payload.player = {
                     ...state.player,
                     ...payload.player
                 }
             }
 
-            if(payload.owner) {
+            if (payload.owner) {
                 payload.owner = {
                     ...state.owner,
                     ...payload.owner
@@ -91,19 +91,18 @@ const gameSlice = createSlice({
 
             state.board[x][y].ship = !state.board[x][y].ship;
         },
-        shoot(state, action) {
+        changeCells(state, action) {
             if (state === null || state.shots === null) {
                 return state;
             }
 
-            if (state.status !== 'playing' || !state.yourTurn) return state;
+            const changedCells: ChangedCell[] = action.payload.changedCell;
+            const boardToChange = action.payload.yourBoard ? state.board! : state.shots;
 
-            const x = action.payload.x;
-            const y = action.payload.y;
-
-            if (state.shots[x][y].hit) return state;
-
-            state.shots[x][y].hit = true;
+            for (const cell of changedCells) {
+                boardToChange[cell.x][cell.y].hit = cell.hit;
+                boardToChange[cell.x][cell.y].ship = cell.ship;
+            }
         }
     }
 });

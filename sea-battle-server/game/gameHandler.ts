@@ -13,7 +13,7 @@ module.exports = {
     register: async function (server: Server) {
         const io: SocketServerType = new SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server.listener, {
             cors: {
-                origin: "http://localhost:5173",
+                origin: ["http://localhost:5173", "http://192.168.0.164:5173"],
             }
         });
 
@@ -42,6 +42,10 @@ module.exports = {
             socket.on("place_ships", (ship) => socket.data.game?.placeShips(socket, ship))
 
             socket.on("toggle_ready", () => socket.data.game?.toggleReady(socket))
+
+            socket.on("start_shooting", () => socket.data.game?.startShooting(socket))
+
+            socket.on("send_shot", (x, y) => socket.data.game?.sendShot(socket, x, y))
 
             socket.on('disconnect', () => {
                 console.log(`socket ${socket.id} disconnected`);

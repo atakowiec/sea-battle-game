@@ -43,3 +43,12 @@ export interface OpenGame {
     id: string;
     owner: string;
 }
+
+export interface Position {
+    x: number
+    y: number
+    hit?: boolean
+    ship?: boolean
+}
+
+export type Ship = Position[]
