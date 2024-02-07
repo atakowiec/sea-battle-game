@@ -11,13 +11,17 @@ const notificationSlice = createSlice({
             state.push({
                 id: ++id,
                 message: action.payload.message,
-                type: action.payload.type
+                type: action.payload.type,
+                title: action.payload.title
             });
 
             return state;
         },
         removeNotification(state, action) {
             return state.filter(notification => notification.id !== action.payload);
+        },
+        removeNotificationsOfType(state, action) {
+            return state.filter(notification => notification.type !== action.payload);
         }
     }
 });

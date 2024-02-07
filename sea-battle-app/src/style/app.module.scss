@@ -5,6 +5,30 @@ body {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
+.notificationAlertBox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  .notification {
+    padding: 10px 20px 30px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+    background-color: #fff;
+    color: #000025;
+    text-align: center;
+    width: 300px;
+    cursor: pointer;
+  }
+}
+
 .notificationsBox {
   position: fixed;
   top: 20px;
@@ -192,12 +216,6 @@ body {
             display: flex;
             align-items: center;
             justify-content: space-between;
-
-            .idBox {
-              color: #aaa;
-              font-size: 12px;
-              padding-left: 10px;
-            }
 
             button {
               padding: 5px 10px;

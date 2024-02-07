@@ -8,13 +8,25 @@ export default function NotificationsBox() {
     const dispatch = useDispatch()
 
     return (
-        <div className={appStyle.notificationsBox}>
-            {notifications.map((notification, index) => (
-                <div key={index} className={`${appStyle.notification} ${appStyle[notification.type]}`}
-                     onClick={() => dispatch(notificationActions.removeNotification(notification.id))}>
-                    {notification.message}
-                </div>
-            ))}
-        </div>
+        <>
+            {notifications.some(notification => notification.type === 'alert') &&
+                <div className={appStyle.notificationAlertBox} onClick={() => dispatch(notificationActions.removeNotificationsOfType("alert"))}>
+                    {notifications.filter(notification => notification.type === 'alert').map((notification) => (
+                        <div key={notification.id} className={`${appStyle.notification} ${appStyle[notification.type]}`}
+                             onClick={() => dispatch(notificationActions.removeNotification(notification.id))}>
+                            {notification.title && <h3>{notification.title}</h3>}
+                            {notification.message}
+                        </div>
+                    ))}
+                </div>}
+            <div className={appStyle.notificationsBox}>
+                {notifications.filter(notifications => notifications.type !== "alert").map((notification, index) => (
+                    <div key={index} className={`${appStyle.notification} ${appStyle[notification.type]}`}
+                         onClick={() => dispatch(notificationActions.removeNotification(notification.id))}>
+                        {notification.message}
+                    </div>
+                ))}
+            </div>
+        </>
     )
 }

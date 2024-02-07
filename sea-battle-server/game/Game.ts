@@ -192,15 +192,81 @@ export class Game {
         });
     }
 
+    endScreenAction(socket: SocketType, action: "play_again" | "go_to_lobby" | "leave") {
+        if (!Game.checkUsername(socket)) return;
+        if (this.status !== "finished") return;
+
+        if (action === "leave") {
+            if (this.isAdmin(socket)) {
+                this.emitPlayer("info", "The admin has left the game");
+                this.emitOwner("info", "You have left the game");
+                this.remove();
+            } else {
+                this.leave(socket);
+            }
+            return;
+        }
+
+        if (!this.checkAdmin(socket)) return;
+
+        if (action === "play_again") {
+            if (!this.player || this.player.socket.disconnected) {
+                return;
+            }
+
+            this.status = "preparing";
+            this.resetGame()
+            this.emitPlayer("info", "The admin has started a new game");
+            this.emitOwner("info", "New game started");
+        }
+
+        if (action === "go_to_lobby") {
+            this.emitPlayer("info", "The admin has left to the lobby");
+            this.emitOwner("info", "You have left to the lobby");
+            this.status = "lobby";
+            this.resetGame()
+        }
+    }
+
+    resetGame() {
+        this.winner = null;
+        this.owner = {
+            username: this.owner.username,
+            socket: this.owner.socket,
+            ready: false,
+            shots: emptyBoard(),
+            board: emptyBoard()
+        }
+        if (this.player) {
+            this.player = {
+                username: this.player.username,
+                socket: this.player.socket,
+                ready: false,
+                shots: emptyBoard(),
+                board: emptyBoard()
+            }
+        }
+
+        this.emitGameChange();
+    }
+
     sendShot(socket: SocketType, x: number, y: number) {
         if (!Game.checkUsername(socket)) return;
         const shooter = this.getGameMember(socket);
-        if (!shooter) return;
+        if (!shooter) {
+            return;
+        }
 
         // some checks
-        if (this.status !== "playing") return;
-        if (this.ownerTurn && socket !== this.owner.socket) return;
-        if (!this.ownerTurn && socket !== this.player?.socket) return;
+        if (this.status !== "playing") {
+            return;
+        }
+        if (this.ownerTurn && socket !== this.owner.socket) {
+            return;
+        }
+        if (!this.ownerTurn && socket !== this.player?.socket) {
+            return;
+        }
 
         const target = this.ownerTurn ? this.player! : this.owner;
         // if the cell is already hit, do nothing
@@ -306,10 +372,16 @@ export class Game {
     checkPlayerKick() {
         if (this.player?.socket.disconnected) {
             this.player = null;
-            this.emitGameChange({
-                player: null
-            });
             this.emitOwner("info", "The player has been kicked from the game for being disconnected")
+
+            if (this.status !== "lobby") {
+                this.status = "lobby";
+                this.resetGame()
+            } else {
+                this.emitGameChange({
+                    player: null
+                });
+            }
         }
     }
 
@@ -377,7 +449,7 @@ export class Game {
             },
             status: this.status,
             winner: this.winner,
-            yourTurn: member === this.player ? this.ownerTurn : !this.ownerTurn,
+            yourTurn: member === this.owner ? this.ownerTurn : !this.ownerTurn,
             board: member.board,
             shots: member.shots,
             shipWrappingAllowed: this.shipWrappingAllowed,
@@ -482,6 +554,15 @@ export class Game {
         OpenGamesHandler.instance.sendOpenGames(socket);
 
         this.owner.socket.emit("info", `${socket.data.username} has left the game`)
+
+        if (this.status !== "lobby") {
+            this.status = "lobby";
+            this.resetGame()
+        }
+
+        if (this.playerTimeout) {
+            clearTimeout(this.playerTimeout);
+        }
     }
 
     /**
@@ -552,10 +633,13 @@ export class Game {
      */
     onOwnerDisconnect() {
         if (!this.player || this.player.socket.disconnected) return this.remove();
+        this.owner.ready = false;
+
         this.emitPlayer("info", `${this.owner.username} has disconnected, waiting for reconnection`)
         this.emitPlayer("game_updated", {
             owner: {
-                online: false
+                online: false,
+                ready: false
             }
         })
 
@@ -570,9 +654,12 @@ export class Game {
      */
     onPlayerDisconnect() {
         this.emitOwner("info", `${this.player?.username} has disconnected, waiting for reconnection`)
+        this.player!.ready = false;
+
         this.emitOwner("game_updated", {
             player: {
-                online: false
+                online: false,
+                ready: false
             }
         })
 
@@ -609,7 +696,9 @@ export class Game {
 
     emitGameChange(packet?: GamePacket) {
         if (!packet) {
-            this.emitPlayer("game_set", this.getPacket(this.player!))
+            if (this.player) {
+                this.emitPlayer("game_set", this.getPacket(this.player!))
+            }
             this.emitOwner("game_set", this.getPacket(this.owner))
         } else {
             this.emit("game_updated", packet);

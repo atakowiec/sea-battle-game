@@ -47,6 +47,8 @@ module.exports = {
 
             socket.on("send_shot", (x, y) => socket.data.game?.sendShot(socket, x, y))
 
+            socket.on("end_screen_action", (action) => socket.data.game?.endScreenAction(socket, action as any))
+
             socket.on('disconnect', () => {
                 console.log(`socket ${socket.id} disconnected`);
 
@@ -57,6 +59,8 @@ module.exports = {
 } as Plugin<any>
 
 function setUserName(socket: SocketType, username: string | null, callback: (error: boolean, message?: string) => void) {
+    if(socket.data.username === username) return callback(false);
+
     let otherSocket = [...Game.io.of("/").sockets.values()].find((socket) => socket.data.username === username)
     if (otherSocket?.connected) {
         console.log(`socket ${socket.id} attempted to use taken username ${username}`)

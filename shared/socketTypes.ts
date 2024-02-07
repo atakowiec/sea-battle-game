@@ -29,6 +29,7 @@ export interface ClientToServerEvents {
     toggle_ready: () => void
     start_shooting: () => void
     send_shot: (x: number, y: number) => void
+    end_screen_action: (action: string) => void
 }
 
 export interface SettingsType {

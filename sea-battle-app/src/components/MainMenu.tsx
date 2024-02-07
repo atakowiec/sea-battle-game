@@ -61,9 +61,6 @@ export default function MainMenu() {
                                 <li key={game.id}>
                                     <div>
                                         Gra gracza: <b>{game.owner}</b>
-                                        <span className={appStyle.idBox}>
-                                            {game.id}
-                                        </span>
                                     </div>
                                     <button onClick={() => joinRoom(game.id)}>
                                         Join

@@ -18,28 +18,6 @@ export function SocketProvider({children}: { children?: ReactNode }) {
 
         socketRef.current = socket;
 
-        socket.on('connect', () => {
-            console.log('connected');
-
-            if (localStorage.getItem("username") && localStorage.getItem("username") !== "null") {
-                // if username has been retrieved from localstorage on first render send id to server
-                socket.emit("set_username", localStorage.getItem("username"), (error, message) => {
-                    if (error) {
-                        dispatch(actions.setUsername(""));
-
-                        return dispatch(notificationActions.addNotification({
-                            type: "error",
-                            message: message
-                        }))
-                    }
-
-                    dispatch(actions.setUsername(localStorage.getItem("username")))
-                })
-            } else {
-                dispatch(actions.setUsername(null))
-            }
-        });
-
         socket.on("game_updated", (gameData) => dispatch(gameActions.updateGameData(gameData)))
         socket.on("game_set", (gameData) => {
             dispatch(gameActions.setGameData(gameData));
@@ -73,6 +51,28 @@ export function SocketProvider({children}: { children?: ReactNode }) {
             setTimeout(() => {
                 dispatch(notificationActions.removeNotification(newId))
             }, 6000)
+        });
+
+        socket.on('connect', () => {
+            console.log('connected');
+
+            if (localStorage.getItem("username") && localStorage.getItem("username") !== "null") {
+                // if username has been retrieved from localstorage on first render send id to server
+                socket.emit("set_username", localStorage.getItem("username"), (error, message) => {
+                    if (error) {
+                        dispatch(actions.setUsername(""));
+
+                        return dispatch(notificationActions.addNotification({
+                            type: "error",
+                            message: message
+                        }))
+                    }
+
+                    dispatch(actions.setUsername(localStorage.getItem("username")))
+                })
+            } else {
+                dispatch(actions.setUsername(null))
+            }
         });
 
         socket.on('disconnect', () => {

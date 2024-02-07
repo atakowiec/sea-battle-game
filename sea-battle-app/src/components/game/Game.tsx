@@ -23,7 +23,7 @@ export default function Game() {
         });
 
         return () => {
-            console.log("unmount")
+            socket.off("send_cell_change")
         }
     }, []);
 
@@ -148,15 +148,62 @@ export default function Game() {
     }
 
     return (
-        <div className={gameStyle.gameContainer}>
-            <h1>Sea Battle Game</h1>
-            <div className={gameStyle.box}>
-                <MyBoard wrongPlacement={wrongPlacement}/>
-                <div className={gameStyle.centerBox}>
-                    <GameInfo game={game} shipCounts={shipCounts} wrongPlacement={wrongPlacement}/>
-                    <Chat/>
+        <>
+            {game.winner && <WinnerScreen/>}
+            <div className={gameStyle.gameContainer}>
+                <h1>Sea Battle Game</h1>
+                <div className={gameStyle.box}>
+                    <MyBoard wrongPlacement={wrongPlacement}/>
+                    <div className={gameStyle.centerBox}>
+                        <GameInfo game={game} shipCounts={shipCounts} wrongPlacement={wrongPlacement}/>
+                        <Chat/>
+                    </div>
+                    <OpponentBoard/>
                 </div>
-                <OpponentBoard/>
+            </div>
+        </>
+    )
+}
+
+function WinnerScreen() {
+    const game = useSelector((state: State) => state.game)
+    const username = useSelector((state: State) => state.user.username)
+    const socket = useSocket()
+
+    function playAgain() {
+        socket.emit("end_screen_action", "play_again")
+    }
+
+    function goToLobby() {
+        socket.emit("end_screen_action", "go_to_lobby")
+    }
+
+    function leave() {
+        socket.emit("end_screen_action", "leave")
+    }
+
+    return (
+        <div className={gameStyle.winnerScreenContainer}>
+            <div className={gameStyle.winnerScreen}>
+                <h1>
+                    Game finished
+                </h1>
+                <h2>
+                    Winner: {game.winner}
+                </h2>
+                <div className={gameStyle.buttonsBox}>
+                    {username === game.owner.username &&
+                        <>
+                            <button className={`${gameStyle.button} ${gameStyle.playAgain}`} onClick={playAgain}>Play
+                                again
+                            </button>
+                            <button className={`${gameStyle.button} ${gameStyle.lobbyButton}`} onClick={goToLobby}>Go to
+                                lobby
+                            </button>
+                        </>
+                    }
+                    <button className={`${gameStyle.button} ${gameStyle.lobbyButton}`} onClick={leave}>Leave</button>
+                </div>
             </div>
         </div>
     )
