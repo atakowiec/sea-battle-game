@@ -1,6 +1,5 @@
 import {createSlice} from "@reduxjs/toolkit";
 import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
-import useSocket from "../socket/useSocket.ts";
 
 export interface GameState {
     id: string;
@@ -15,6 +14,7 @@ export interface GameState {
     ownerOnline?: boolean;
     shipWrappingAllowed?: boolean,
     cornerCollisionsAllowed?: boolean
+    requiredShips: { [key: number]: number };
 }
 
 const gameSlice = createSlice({
@@ -40,7 +40,8 @@ const gameSlice = createSlice({
                 playerOnline: payload.playerOnline ?? false,
                 ownerOnline: payload.ownerOnline ?? false,
                 shipWrappingAllowed: payload?.shipWrappingAllowed ?? false,
-                cornerCollisionsAllowed: payload?.cornerCollisionsAllowed ?? false
+                cornerCollisionsAllowed: payload?.cornerCollisionsAllowed ?? false,
+                requiredShips: payload.requiredShips
             } as GameState;
         },
         updateGameData(state, action) {

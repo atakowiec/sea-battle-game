@@ -1,7 +1,7 @@
 import {State} from "../../store";
 import {useDispatch, useSelector} from "react-redux";
 import gameStyle from "../../style/game.module.scss"
-import {BoardCell, BoardType, PlaceShipsPacket} from "@shared/gameTypes.ts";
+import {BoardCell, BoardType, GameStatus, PlaceShipsPacket} from "@shared/gameTypes.ts";
 import {gameActions, GameState} from "../../store/gameSlice.ts";
 import {useEffect, useState} from "react";
 import useSocket from "../../socket/useSocket.ts";
@@ -13,100 +13,16 @@ interface Position {
 
 type Ship = Position[]
 
+const falseMatrix = () => Array.from({length: 10}, () => Array(10).fill(false))
+
 export default function Game() {
     const game = useSelector((state: State) => state.game)
-
-    return (
-        <div className={gameStyle.gameContainer}>
-            <h1>Sea Battle Game</h1>
-            <div className={gameStyle.box}>
-                <Board yourBoard={true}/>
-                <div className={gameStyle.centerBox}>
-                    <GameInfo game={game}/>
-                    <Chat/>
-                </div>
-                <Board yourBoard={false}/>
-            </div>
-        </div>
-    )
-}
-
-function Board({yourBoard}: { yourBoard: boolean }) {
-    const game = useSelector((state: State) => state.game)
-    const board = yourBoard ? game.board! : game.shots!
-    const dispatch = useDispatch()
-    const socket = useSocket()
-    const [wrongPlacement, setWrongPlacement] =
-        useState(Array.from({length: 10}, () => Array(10).fill(false)) as boolean[][])
-
-    const [lastSavedBoard, setLastSavedBoard] = useState(board as BoardType)
-    const [debouncedBoardState, setDebouncedBoardState] = useState(false)
-
-    const onClick = (x: number, y: number) => {
-        if (yourBoard) {
-            if (game.status !== 'preparing') return;
-
-            dispatch(gameActions.placeShip({x, y}))
-        } else {
-            if (game.status !== "playing" || !game.yourTurn) return;
-
-            dispatch(gameActions.shoot({x, y}))
-        }
-    }
-
-    useEffect(() => {
-        checkBoard()
-        if (!yourBoard) return;
-        let timer: NodeJS.Timeout;
-
-        const debounceState = () => {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                setDebouncedBoardState(prevState => !prevState);
-            }, 2000);
-        };
-        debounceState();
-
-        return () => clearTimeout(timer);
-    }, [board])
-
-    useEffect(() => {
-        sendPlacedShips();
-    }, [debouncedBoardState]);
-
-    function sendPlacedShips() {
-        const changes = [] as PlaceShipsPacket
-
-        lastSavedBoard.forEach((row, x) => {
-            row.forEach((cell, y) => {
-                const boardCell = board[x][y];
-                if (cell.ship !== boardCell.ship) {
-                    changes.push({x, y, ship: boardCell.ship, hit: boardCell.hit})
-                }
-            })
-        });
-
-        if (changes.length === 0) return;
-
-        setLastSavedBoard(board)
-        socket.emit("place_ships", changes)
-    }
+    const board = game.board!
+    const [shipCounts, setShipCounts] = useState({} as { [key: number]: number })
+    const [wrongPlacement, setWrongPlacement] = useState(falseMatrix())
 
     function checkBoard() {
-        const ships = [] as Ship[]
-        const checked = [] as Position[]
-
-        for (let i = 0; i < 10; i++) {
-            for (let j = 0; j < 10; j++) {
-                if (checked.some(pos => pos.x === i && pos.y === j)) continue
-                if (board[i][j].ship) {
-                    const ship = [] as Ship
-                    checkNeighbors(ship, i, j)
-                    ships.push(ship)
-                }
-            }
-        }
-
+        const ships = getBoardShips()
         const wrongShips = [] as Ship[]
         const wrongPlacement = [] as Position[]
 
@@ -146,13 +62,6 @@ function Board({yourBoard}: { yourBoard: boolean }) {
             }
         }
 
-        const newWrongPlacement = Array.from({length: 10}, () => Array(10).fill(false))
-        wrongPlacement.forEach(pos => {
-            newWrongPlacement[pos.x][pos.y] = true
-        })
-
-        setWrongPlacement(newWrongPlacement)
-
         // Count ships of each type
         const shipTypes: { [key: number]: number } = {}
         ships.forEach(ship => {
@@ -165,6 +74,47 @@ function Board({yourBoard}: { yourBoard: boolean }) {
                 shipTypes[length]++
             }
         })
+
+        // Check if there are too many ships of a certain type or there are too long ships
+        const keys = Object.keys(shipTypes) as any as number[];
+        keys.forEach((key) => {
+            if (!game.requiredShips[key] || shipTypes[key] > game.requiredShips[key]) {
+                ships.forEach(ship => {
+                    if (ship.length == key) {
+                        wrongPlacement.push(...ship)
+                    }
+                })
+            }
+        })
+
+        const newWrongPlacement = Array.from({length: 10}, () => Array(10).fill(false))
+        wrongPlacement.forEach(pos => {
+            newWrongPlacement[pos.x][pos.y] = true
+        })
+        setWrongPlacement(newWrongPlacement)
+        setShipCounts(shipTypes)
+    }
+
+    useEffect(() => {
+        checkBoard()
+    }, [board])
+
+    function getBoardShips(): Ship[] {
+        const ships = [] as Ship[]
+        const checked = [] as Position[]
+
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 10; j++) {
+                if (checked.some(pos => pos.x === i && pos.y === j)) continue
+                if (board[i][j].ship) {
+                    const ship = [] as Ship
+                    checkNeighbors(ship, i, j)
+                    ships.push(ship)
+                }
+            }
+        }
+
+        return ships;
 
         function checkNeighbors(ship: Ship, x: number, y: number) {
             if (checked.some(pos => pos.x === x && pos.y === y)) return
@@ -192,9 +142,102 @@ function Board({yourBoard}: { yourBoard: boolean }) {
     }
 
     return (
+        <div className={gameStyle.gameContainer}>
+            <h1>Sea Battle Game</h1>
+            <div className={gameStyle.box}>
+                <MyBoard wrongPlacement={wrongPlacement}/>
+                <div className={gameStyle.centerBox}>
+                    <GameInfo game={game} shipCounts={shipCounts}/>
+                    <Chat/>
+                </div>
+                <OpponentBoard/>
+            </div>
+        </div>
+    )
+}
+
+function OpponentBoard() {
+    const game = useSelector((state: State) => state.game)
+    const board = game.shots!
+
+    return (
         <div className={gameStyle.board}>
             <h2>
-                {yourBoard ? "Your board" : "Your shots"}
+                Your shots
+            </h2>
+            <div className={gameStyle.row}>
+                <div className={`${gameStyle.cell} ${gameStyle.colNumber}`}></div>
+                {board[0].map((_, i) => (
+                    <div key={i} className={`${gameStyle.cell} ${gameStyle.colNumber}`}>{i + 1}</div>
+                ))}
+            </div>
+            {board.map((row, i) => (
+                <div key={i} className={gameStyle.row}>
+                    <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}> {String.fromCharCode(65 + i)}</div>
+                    {row.map((cell, j) => (
+                        <Cell key={j} cell={cell} x={i} y={j}/>
+                    ))}
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
+    const game = useSelector((state: State) => state.game)
+    const board = game.board!
+    const dispatch = useDispatch()
+    const socket = useSocket()
+
+    const [lastSavedBoard, setLastSavedBoard] = useState(board as BoardType)
+    const [debouncedBoardState, setDebouncedBoardState] = useState(false)
+
+    const onClick = (x: number, y: number) => {
+        if (game.status !== 'preparing') return;
+
+        dispatch(gameActions.placeShip({x, y}))
+    }
+
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+
+        const debounceState = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                setDebouncedBoardState(prevState => !prevState);
+            }, 2000);
+        };
+        debounceState();
+
+        return () => clearTimeout(timer);
+    }, [board])
+
+    useEffect(() => {
+        sendPlacedShips();
+    }, [debouncedBoardState]);
+
+    function sendPlacedShips() {
+        const changes = [] as PlaceShipsPacket
+
+        lastSavedBoard.forEach((row, x) => {
+            row.forEach((cell, y) => {
+                const boardCell = board[x][y];
+                if (cell.ship !== boardCell.ship) {
+                    changes.push({x, y, ship: boardCell.ship, hit: boardCell.hit})
+                }
+            })
+        });
+
+        if (changes.length === 0) return;
+
+        setLastSavedBoard(board)
+        socket.emit("place_ships", changes)
+    }
+
+    return (
+        <div className={gameStyle.board}>
+            <h2>
+                Your board
             </h2>
             <div className={gameStyle.row}>
                 <div className={`${gameStyle.cell} ${gameStyle.colNumber}`}></div>
@@ -217,17 +260,17 @@ function Board({yourBoard}: { yourBoard: boolean }) {
 
 function Cell({cell, click, x, y, placedWrong}: {
     cell: BoardCell,
-    click: () => void,
+    click?: () => void,
     x: number,
     y: number,
-    placedWrong: boolean
+    placedWrong?: boolean
 }) {
     const game = useSelector((state: State) => state.game)
     const board = game.board!
     const neighbors = getCellNeighbors(x, y, board)
 
     return (
-        <div className={gameStyle.cell} onClick={click}>
+        <div className={gameStyle.cell} onClick={click ? click : undefined}>
             {cell.hit && <div className={gameStyle.hit}/>}
             {cell.ship &&
                 <div className={`${gameStyle.ship} ${placedWrong && gameStyle.wrongPlaced}`}>
@@ -252,16 +295,16 @@ function Chat() {
     )
 }
 
-function GameInfo({game}: { game: GameState }) {
+function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: number]: number } }) {
     const username = useSelector((state: State) => state.user.username)
     const opponentOnline = username === game.owner ? game.playerOnline : game.ownerOnline
 
-    function translateStatus(status: string) {
+    function translateStatus(status: GameStatus) {
         switch (status) {
             case "lobby":
                 return "In lobby"
-            case "started":
-                return "Game started"
+            case "playing":
+                return "Playing game"
             case "finished":
                 return "Game finished"
             case "preparing":
@@ -285,6 +328,25 @@ function GameInfo({game}: { game: GameState }) {
             <div className={gameStyle.status}>
                 {translateStatus(game.status)}
             </div>
+            {game.status === "preparing" && <div>
+                <h2>Required ships</h2>
+                    {Object.keys(game.requiredShips).map((key: any) => {
+                        const needShips = game.requiredShips[key] - (shipCounts[key] || 0)
+
+                        return (
+                            <div key={key} className={`${gameStyle.shipCountBox} ${needShips < 0 ? gameStyle.invalid : ""} ${needShips == 0 ? gameStyle.correct : ""}`}>
+                                <div className={gameStyle.count}>
+                                    {shipCounts[key] ?? 0} / {game.requiredShips[key]}
+                                </div>
+                                <div className={gameStyle.preview}>
+                                    {Array.from({length: parseInt(key)}, () => (
+                                        <div className={`${gameStyle.part}`}></div>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+            </div>}
         </div>
     )
 }

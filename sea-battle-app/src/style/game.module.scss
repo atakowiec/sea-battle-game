@@ -50,6 +50,43 @@
           padding: 5px;
           border-radius: 5px;
         }
+
+        .shipCountBox {
+          width: 100%;
+          display: flex;
+          margin: 0.6rem 0;
+
+          &.invalid {
+            .part {
+                background-color: #ff0000 !important;
+            }
+          }
+
+          &.correct {
+            .part {
+                background-color: #00c700 !important;
+            }
+          }
+
+          .count {
+            width: 50%;
+            display: flex;
+            justify-content: flex-end;
+            padding-right: 10px;
+          }
+
+          .preview {
+            width: 50%;
+            display: flex;
+
+            .part {
+              background-color: #000025;
+              height: 20px;
+              border-radius: 5px;
+              width: 20px !important;
+            }
+          }
+        }
       }
     }
 
@@ -127,6 +164,7 @@
 
             .shipPart {
               background-color: #000533;
+
               position: absolute;
 
               &.center {

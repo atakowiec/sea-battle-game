@@ -24,6 +24,7 @@ export interface GamePacket {
     ownerOnline?: boolean;
     shipWrappingAllowed?: boolean;
     cornerCollisionsAllowed?: boolean;
+    requiredShips?: { [key: number]: number };
 }
 
 export interface ChangedCell {

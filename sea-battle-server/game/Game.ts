@@ -26,6 +26,13 @@ export class Game {
     cornerCollisionsAllowed: boolean;
     shipWrappingAllowed: boolean;
 
+    requiredShips: { [key: number]: number } = {
+        4: 1,
+        3: 2,
+        2: 3,
+        1: 4
+    }
+
     constructor(id: string, owner: SocketType) {
         this.id = id;
         this.owner = {
@@ -201,7 +208,8 @@ export class Game {
             playerOnline: !this.player?.socket.disconnected,
             ownerOnline: !this.owner.socket.disconnected,
             shipWrappingAllowed: this.shipWrappingAllowed,
-            cornerCollisionsAllowed: this.cornerCollisionsAllowed
+            cornerCollisionsAllowed: this.cornerCollisionsAllowed,
+            requiredShips: this.requiredShips
         }
     }
 
