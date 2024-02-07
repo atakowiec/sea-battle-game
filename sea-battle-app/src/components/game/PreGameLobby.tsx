@@ -8,7 +8,7 @@ export default function PreGameLobby() {
     const game = useSelector((state: State) => state.game)
     const user = useSelector((state: State) => state.user)
     const playerPresent = game.player != null
-    const isOwner = game.owner === user.username
+    const isOwner = game.owner.username === user.username
     const socket = useSocket()
     const dispatch = useDispatch()
 
@@ -64,8 +64,8 @@ export default function PreGameLobby() {
                         owner
                     </span>
                     <span className={appStyle.nickname}>
-                        {game.owner}
-                        {!game.ownerOnline && game.owner && " (offline)"}
+                        {game.owner.username}
+                        {!game.owner.online && game.owner && " (offline)"}
                     </span>
                 </div>
                 <div className={appStyle.member}>
@@ -73,8 +73,8 @@ export default function PreGameLobby() {
                         player
                     </span>
                     <span className={appStyle.nickname}>
-                        {game.player ?? "-"}
-                        {!game.playerOnline && game.player && " (offline)"}
+                        {game.player?.username ?? "-"}
+                        {!game.player?.online && game.player && " (offline)"}
                     </span>
                     {playerPresent && isOwner && <button onClick={kick} className={appStyle.kick}>kick</button>}
                 </div>

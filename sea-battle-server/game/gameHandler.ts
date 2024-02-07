@@ -37,7 +37,9 @@ module.exports = {
 
             socket.on("set_username", (username, callback) => setUserName(socket, username, callback))
 
-            socket.on("place_ships", (ships) => socket.data.game?.placeShips(socket, ships))
+            socket.on("place_ships", (ship) => socket.data.game?.placeShips(socket, ship))
+
+            socket.on("toggle_ready", () => socket.data.game?.toggleReady(socket))
 
             socket.on('disconnect', () => {
                 console.log(`socket ${socket.id} disconnected`);

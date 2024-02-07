@@ -13,18 +13,22 @@ export type GameStatus = 'lobby' | 'preparing' | 'playing' | 'finished';
  */
 export interface GamePacket {
     id?: string;
-    owner?: string;
-    player?: string | null;
+    owner?: GameMemberData
+    player?: GameMemberData | null;
     status?: GameStatus;
     winner?: string | null;
     yourTurn?: boolean;
     board?: BoardType;
     shots?: BoardType;
-    playerOnline?: boolean;
-    ownerOnline?: boolean;
     shipWrappingAllowed?: boolean;
     cornerCollisionsAllowed?: boolean;
     requiredShips?: { [key: number]: number };
+}
+
+export interface GameMemberData {
+    username?: string;
+    online?: boolean;
+    ready?: boolean;
 }
 
 export interface ChangedCell {
@@ -33,5 +37,3 @@ export interface ChangedCell {
     hit: boolean;
     ship: boolean;
 }
-
-export type PlaceShipsPacket = ChangedCell[];

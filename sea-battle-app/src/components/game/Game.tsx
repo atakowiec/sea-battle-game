@@ -1,7 +1,7 @@
 import {State} from "../../store";
 import {useDispatch, useSelector} from "react-redux";
 import gameStyle from "../../style/game.module.scss"
-import {BoardCell, BoardType, GameStatus, PlaceShipsPacket} from "@shared/gameTypes.ts";
+import {BoardCell, ChangedCell, GameStatus} from "@shared/gameTypes.ts";
 import {gameActions, GameState} from "../../store/gameSlice.ts";
 import {useEffect, useState} from "react";
 import useSocket from "../../socket/useSocket.ts";
@@ -76,7 +76,7 @@ export default function Game() {
         })
 
         // Check if there are too many ships of a certain type or there are too long ships
-        const keys = Object.keys(shipTypes) as any as number[];
+        const keys = Object.keys(shipTypes) as unknown as number[];
         keys.forEach((key) => {
             if (!game.requiredShips[key] || shipTypes[key] > game.requiredShips[key]) {
                 ships.forEach(ship => {
@@ -188,50 +188,22 @@ function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
     const board = game.board!
     const dispatch = useDispatch()
     const socket = useSocket()
-
-    const [lastSavedBoard, setLastSavedBoard] = useState(board as BoardType)
-    const [debouncedBoardState, setDebouncedBoardState] = useState(false)
+    const username = useSelector((state: State) => state.user.username)
+    const playerData = game.owner.username === username ? game.owner : game.player
 
     const onClick = (x: number, y: number) => {
         if (game.status !== 'preparing') return;
+        if (playerData?.ready) return;
 
         dispatch(gameActions.placeShip({x, y}))
+        const currentCell = board[x][y]
+        const change = {x, y, ship: !currentCell.ship, hit: currentCell.hit} as ChangedCell
+
+        sendPlacedShip(change)
     }
 
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-
-        const debounceState = () => {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                setDebouncedBoardState(prevState => !prevState);
-            }, 2000);
-        };
-        debounceState();
-
-        return () => clearTimeout(timer);
-    }, [board])
-
-    useEffect(() => {
-        sendPlacedShips();
-    }, [debouncedBoardState]);
-
-    function sendPlacedShips() {
-        const changes = [] as PlaceShipsPacket
-
-        lastSavedBoard.forEach((row, x) => {
-            row.forEach((cell, y) => {
-                const boardCell = board[x][y];
-                if (cell.ship !== boardCell.ship) {
-                    changes.push({x, y, ship: boardCell.ship, hit: boardCell.hit})
-                }
-            })
-        });
-
-        if (changes.length === 0) return;
-
-        setLastSavedBoard(board)
-        socket.emit("place_ships", changes)
+    function sendPlacedShip(changedCell: ChangedCell) {
+        socket.emit("place_ships", changedCell)
     }
 
     return (
@@ -296,8 +268,10 @@ function Chat() {
 }
 
 function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: number]: number } }) {
+    let shipsPlacedCorrectly = true
+    const socket = useSocket()
     const username = useSelector((state: State) => state.user.username)
-    const opponentOnline = username === game.owner ? game.playerOnline : game.ownerOnline
+    const playerData = useSelector((state: State) => state.game.owner.username === username ? state.game.owner : state.game.player)
 
     function translateStatus(status: GameStatus) {
         switch (status) {
@@ -314,38 +288,71 @@ function GameInfo({game, shipCounts}: { game: GameState, shipCounts: { [key: num
         }
     }
 
+    function ready() {
+        socket.emit("toggle_ready")
+    }
+
     return (
         <div className={gameStyle.info}>
-            <h2>
-                Game Info
-            </h2>
-            <div className={gameStyle.gameId}>
-                Game ID: {game.id}
+            <div className={gameStyle.infoBox}>
+                <h2>
+                    Game Info
+                </h2>
+                <div className={gameStyle.gameId}>
+                    Game ID: {game.id}
+                </div>
             </div>
-            <div className={gameStyle.opponent}>
-                Opponent: {game.player === username ? game.owner : game.player} {!opponentOnline && "(offline)"}
+            <div className={gameStyle.infoBox}>
+                <h2>Participants</h2>
+                <div className={gameStyle.membersBox}>
+                    <div className={gameStyle.member}>
+                        {game.status == "preparing" && game.owner.ready && "(Ready) "}
+                        {!game.owner.online && <div className={gameStyle.offlineIndicator}></div>}
+                        {game.owner.username}
+                    </div>
+                    <div className={gameStyle.membersDivider}>
+                        vs
+                    </div>
+                    <div className={gameStyle.member}>
+                        {game.player?.username}
+                        {!game.player?.online && <div className={gameStyle.offlineIndicator}></div>}
+                        {game.status == "preparing" && game.player?.ready && " (Ready)"}
+                    </div>
+                </div>
             </div>
-            <div className={gameStyle.status}>
-                {translateStatus(game.status)}
+            <div className={gameStyle.infoBox}>
+                <h2>
+                    Game status
+                </h2>
+                <div className={gameStyle.status}>
+                    {translateStatus(game.status)}
+                </div>
             </div>
-            {game.status === "preparing" && <div>
+            {game.status === "preparing" && <div className={gameStyle.infoBox}>
                 <h2>Required ships</h2>
-                    {Object.keys(game.requiredShips).map((key: any) => {
-                        const needShips = game.requiredShips[key] - (shipCounts[key] || 0)
+                {Object.keys(game.requiredShips).map((key: any) => {
+                    const needShips = game.requiredShips[key] - (shipCounts[key] || 0)
 
-                        return (
-                            <div key={key} className={`${gameStyle.shipCountBox} ${needShips < 0 ? gameStyle.invalid : ""} ${needShips == 0 ? gameStyle.correct : ""}`}>
-                                <div className={gameStyle.count}>
-                                    {shipCounts[key] ?? 0} / {game.requiredShips[key]}
-                                </div>
-                                <div className={gameStyle.preview}>
-                                    {Array.from({length: parseInt(key)}, () => (
-                                        <div className={`${gameStyle.part}`}></div>
-                                    ))}
-                                </div>
+                    if (needShips != 0)
+                        shipsPlacedCorrectly = false
+
+                    return (
+                        <div key={key}
+                             className={`${gameStyle.shipCountBox} ${needShips < 0 ? gameStyle.invalid : ""} ${needShips == 0 ? gameStyle.correct : ""}`}>
+                            <div className={gameStyle.count}>
+                                {shipCounts[key] ?? 0} / {game.requiredShips[key]}
                             </div>
-                        )
-                    })}
+                            <div className={gameStyle.preview}>
+                                {Array.from({length: parseInt(key)}, (_, index) => (
+                                    <div className={`${gameStyle.part}`} key={"part-" + key + "-" + index}></div>
+                                ))}
+                            </div>
+                        </div>
+                    )
+                })}
+
+                {shipsPlacedCorrectly && <button className={gameStyle.button}
+                                                 onClick={ready}>{playerData?.ready ? "Not ready" : "Ready"}</button>}
             </div>}
         </div>
     )

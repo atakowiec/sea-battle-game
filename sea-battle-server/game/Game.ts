@@ -1,4 +1,4 @@
-import {BoardType, GamePacket, GameStatus, PlaceShipsPacket} from "@shared/gameTypes.ts";
+import {BoardType, ChangedCell, GamePacket, GameStatus} from "@shared/gameTypes.ts";
 import {SocketServerType, SocketType} from "./types.ts";
 import {ServerToClientEventsKeys, ServerToClientEventsValues, SettingsType} from "@shared/socketTypes.ts";
 import {emptyBoard} from "../util/gameUtil.ts";
@@ -6,6 +6,7 @@ import {emptyBoard} from "../util/gameUtil.ts";
 export interface GameMember {
     username: string;
     socket: SocketType
+    ready?: boolean;
     board?: BoardType;
     shots?: BoardType;
 }
@@ -88,16 +89,21 @@ export class Game {
         })
     }
 
-    placeShips(socket: SocketType, ships: PlaceShipsPacket) {
-        if (!ships || !ships.length)
+    placeShips(socket: SocketType, ship: ChangedCell) {
+        if (!ship)
             return;
 
         let board: BoardType | undefined = undefined;
-        if (socket === this.owner.socket)
+        let member: GameMember | undefined = undefined;
+        if (socket === this.owner.socket) {
             board = this.owner.board;
-        else if (socket === this.player?.socket)
+            member = this.owner;
+        }
+        else if (socket === this.player?.socket) {
             board = this.player.board;
-        if (!board)
+            member = this.player;
+        }
+        if (!board || !member)
             return;
 
         const emitBoard = () => {
@@ -110,15 +116,18 @@ export class Game {
             return;
         }
 
+        if(member.ready) {
+            socket.emit("error", "You can't place ships when you are ready");
+            return emitBoard();
+        }
+
         if (this.status !== "preparing") {
             socket.emit("error", "The game has already started");
             emitBoard();
             return;
         }
 
-        ships.forEach(cell => {
-            board![cell.x][cell.y].ship = cell.ship;
-        })
+        board![ship.x][ship.y].ship = ship.ship;
 
         // do not send it back, client already has it because he sent it lol
     }
@@ -198,15 +207,21 @@ export class Game {
     getPacket(member: GameMember): GamePacket {
         return {
             id: this.id,
-            owner: this.owner.username,
-            player: this.player?.username ?? null,
+            owner: {
+                username: this.owner.username,
+                ready: this.owner.ready,
+                online: !this.owner.socket.disconnected
+            },
+            player: !this.player ? null : {
+                username: this.player.username,
+                ready: this.player.ready,
+                online: !this.player.socket.disconnected
+            },
             status: this.status,
             winner: this.winner,
             yourTurn: member === this.player ? this.ownerTurn : !this.ownerTurn,
             board: member.board,
             shots: member.shots,
-            playerOnline: !this.player?.socket.disconnected,
-            ownerOnline: !this.owner.socket.disconnected,
             shipWrappingAllowed: this.shipWrappingAllowed,
             cornerCollisionsAllowed: this.cornerCollisionsAllowed,
             requiredShips: this.requiredShips
@@ -263,7 +278,13 @@ export class Game {
 
         socket.join(this.id)
         socket.data.game = this
-        this.emitOwner("game_updated", {player: this.player.username})
+        this.emitOwner("game_updated", {
+            player: {
+                username: this.player.username,
+                online: true,
+                ready: false
+            }
+        })
         this.emitPlayer("game_set", this.getPacket(this.player))
     }
 
@@ -302,14 +323,22 @@ export class Game {
         if (this.owner.username === socket.data.username) {
             this.owner.socket = socket;
             this.emitOwner("game_set", this.getPacket(this.owner));
-            this.emitPlayer("game_updated", {ownerOnline: true})
+            this.emitPlayer("game_updated", {
+                owner: {
+                    online: true
+                }
+            })
 
             if (this.ownerTimeout)
                 clearTimeout(this.ownerTimeout)
         } else if (this.player?.username === socket.data.username) {
             this.player.socket = socket;
             this.emitPlayer("game_set", this.getPacket(this.player));
-            this.emitOwner("game_updated", {playerOnline: true})
+            this.emitOwner("game_updated", {
+                player: {
+                    online: true
+                }
+            })
 
             if (this.playerTimeout)
                 clearTimeout(this.playerTimeout)
@@ -319,6 +348,28 @@ export class Game {
         socket.data.game = this;
         socket.emit("info", "You have reconnected to the game")
         socket.broadcast.to(this.id).emit("info", `${socket.data.username} has reconnected`)
+    }
+
+    toggleReady(socket: SocketType) {
+        if (this.owner.socket === socket) {
+            this.owner.ready = !this.owner.ready;
+            this.emitGameChange({
+                owner: {
+                    ready: this.owner.ready
+                }
+            })
+        } else if (this.player?.socket === socket) {
+            this.player.ready = !this.player.ready;
+            this.emitGameChange({
+                player: {
+                    ready: this.player.ready
+                }
+            })
+        } else {
+            socket.emit("game_set", null)
+            socket.emit("error", "You are not in this game");
+            return;
+        }
     }
 
     onDisconnect(socket: SocketType) {
@@ -335,7 +386,11 @@ export class Game {
     onOwnerDisconnect() {
         if (!this.player || this.player.socket.disconnected) return this.remove();
         this.emitPlayer("info", `${this.owner.username} has disconnected, waiting for reconnection`)
-        this.emitPlayer("game_updated", {ownerOnline: false})
+        this.emitPlayer("game_updated", {
+            owner: {
+                online: false
+            }
+        })
 
         if (this.ownerTimeout)
             clearTimeout(this.ownerTimeout);
@@ -348,7 +403,11 @@ export class Game {
      */
     onPlayerDisconnect() {
         this.emitOwner("info", `${this.player?.username} has disconnected, waiting for reconnection`)
-        this.emitOwner("game_updated", {playerOnline: false})
+        this.emitOwner("game_updated", {
+            player: {
+                online: false
+            }
+        })
 
         if (this.playerTimeout)
             clearTimeout(this.playerTimeout);

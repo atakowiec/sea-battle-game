@@ -1,17 +1,15 @@
 import {createSlice} from "@reduxjs/toolkit";
-import {BoardType, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {BoardType, GameMemberData, GamePacket, GameStatus} from "@shared/gameTypes.ts";
 
 export interface GameState {
     id: string;
     status: GameStatus
-    owner: string;
-    player: string | null;
+    owner: GameMemberData;
+    player: GameMemberData | null;
     board: BoardType | null;
     shots: BoardType | null;
     yourTurn: boolean;
     winner: string | null;
-    playerOnline?: boolean;
-    ownerOnline?: boolean;
     shipWrappingAllowed?: boolean,
     cornerCollisionsAllowed?: boolean
     requiredShips: { [key: number]: number };
@@ -30,15 +28,13 @@ const gameSlice = createSlice({
 
             return {
                 id: payload.id,
-                owner: payload.owner,
                 player: payload.player ?? null,
+                owner: payload.owner,
                 status: payload.status,
                 board: payload.board ?? null,
                 shots: payload.shots ?? null,
                 yourTurn: payload.yourTurn,
                 winner: payload.winner ?? null,
-                playerOnline: payload.playerOnline ?? false,
-                ownerOnline: payload.ownerOnline ?? false,
                 shipWrappingAllowed: payload?.shipWrappingAllowed ?? false,
                 cornerCollisionsAllowed: payload?.cornerCollisionsAllowed ?? false,
                 requiredShips: payload.requiredShips
@@ -52,6 +48,20 @@ const gameSlice = createSlice({
             }
 
             console.log("Updating game data", payload)
+
+            if(payload.player) {
+                payload.player = {
+                    ...state.player,
+                    ...payload.player
+                }
+            }
+
+            if(payload.owner) {
+                payload.owner = {
+                    ...state.owner,
+                    ...payload.owner
+                }
+            }
 
             return {
                 ...state,
