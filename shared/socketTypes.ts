@@ -1,4 +1,4 @@
-import {ChangedCell, GamePacket} from "./gameTypes";
+import {ChangedCell, GamePacket, OpenGame} from "./gameTypes";
 
 export interface ServerToClientEvents {
     game_updated: (game: GamePacket) => void
@@ -6,6 +6,9 @@ export interface ServerToClientEvents {
     error: (message: string) => void
     info: (message: string) => void
     chat: (username: string, message: string) => void
+    set_open_games: (openGames: OpenGame[]) => void
+    add_open_game: (openGame: OpenGame) => void
+    remove_open_game: (id: string) => void
 }
 
 export type ServerToClientEventsKeys = keyof ServerToClientEvents
@@ -27,7 +30,8 @@ export interface ClientToServerEvents {
 
 export interface SettingsType {
     shipWrappingAllowed?: boolean,
-    cornerCollisionsAllowed?: boolean
+    cornerCollisionsAllowed?: boolean,
+    isOpen?: boolean,
 }
 
 export type ClientToServerEventsKeys = keyof ClientToServerEvents

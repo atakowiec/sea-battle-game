@@ -26,6 +26,13 @@ export default function PreGameLobby() {
         socket.emit("set_settings", {shipWrappingAllowed: !game.shipWrappingAllowed})
     }
 
+    function onOpenGameChange() {
+        if (!isOwner) return
+
+        dispatch(gameActions.changeSetting({isOpen: !game.isOpen}))
+        socket.emit("set_settings", {isOpen: !game.isOpen})
+    }
+
     function kick() {
         if (!playerPresent || !isOwner) return
 
@@ -94,6 +101,15 @@ export default function PreGameLobby() {
                                onChange={onCornerCollisionsChange}
                                disabled={!isOwner}/>
                         Allow corner collisions
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type={"checkbox"}
+                               checked={game.isOpen}
+                               onChange={onOpenGameChange}
+                               disabled={!isOwner}/>
+                        Open game
                     </label>
                 </div>
                 {isOwner && <div>

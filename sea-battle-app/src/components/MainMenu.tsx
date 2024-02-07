@@ -1,21 +1,28 @@
 import appStyle from "../style/app.module.scss"
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {State} from "../store";
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import useSocket from "../socket/useSocket.ts";
+import {openGamesActions} from "../store/openGamesSlice.ts";
 
 export default function MainMenu() {
     const username = useSelector((state: State) => state.user.username)
+    const openGames = useSelector((state: State) => state.openGames)
     const gameIdRef = useRef<HTMLInputElement>(null)
     const [error, setError] = useState("")
     const socket = useSocket()
+    const dispatch = useDispatch()
+
+    useEffect(() => {
+        dispatch(openGamesActions.setOpenGames([]))
+    }, [dispatch]);
 
     function createNewRoom() {
         socket.emit("create_game")
     }
 
-    function joinRoom() {
-        const gameId = gameIdRef.current!.value
+    function joinRoom(id?: string) {
+        const gameId = id ?? gameIdRef.current!.value
 
         socket.emit("join_game", gameId, (message: string) => {
             setError(message)
@@ -42,10 +49,30 @@ export default function MainMenu() {
                     </div>
                 </div>
                 <div>
-                    <button onClick={joinRoom}>
+                    <button onClick={() => joinRoom()}>
                         Join game
                     </button>
                 </div>
+                {openGames.length > 0 &&
+                    <div className={appStyle.openGamesBox}>
+                        <h4>Open games</h4>
+                        <ul>
+                            {openGames.map((game) => (
+                                <li key={game.id}>
+                                    <div>
+                                        Gra gracza: <b>{game.owner}</b>
+                                        <span className={appStyle.idBox}>
+                                            {game.id}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => joinRoom(game.id)}>
+                                        Join
+                                    </button>
+                                </li>)
+                            )}
+                        </ul>
+                    </div>
+                }
             </div>
         </div>
     )

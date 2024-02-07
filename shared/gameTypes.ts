@@ -22,6 +22,7 @@ export interface GamePacket {
     shots?: BoardType;
     shipWrappingAllowed?: boolean;
     cornerCollisionsAllowed?: boolean;
+    isOpen?: boolean;
     requiredShips?: { [key: number]: number };
 }
 
@@ -36,4 +37,9 @@ export interface ChangedCell {
     y: number;
     hit: boolean;
     ship: boolean;
+}
+
+export interface OpenGame {
+    id: string;
+    owner: string;
 }

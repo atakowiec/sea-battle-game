@@ -1,7 +1,8 @@
-import {BoardType, ChangedCell, GamePacket, GameStatus} from "@shared/gameTypes.ts";
+import {BoardType, ChangedCell, GamePacket, GameStatus, OpenGame} from "@shared/gameTypes.ts";
 import {SocketServerType, SocketType} from "./types.ts";
 import {ServerToClientEventsKeys, ServerToClientEventsValues, SettingsType} from "@shared/socketTypes.ts";
 import {emptyBoard} from "../util/gameUtil.ts";
+import OpenGamesHandler from "./OpenGamesHandler.ts";
 
 export interface GameMember {
     username: string;
@@ -26,6 +27,7 @@ export class Game {
     winner: string | null;
     cornerCollisionsAllowed: boolean;
     shipWrappingAllowed: boolean;
+    isOpen: boolean;
 
     requiredShips: { [key: number]: number } = {
         4: 1,
@@ -46,6 +48,7 @@ export class Game {
         this.winner = null;
         this.cornerCollisionsAllowed = false;
         this.shipWrappingAllowed = false;
+        this.isOpen = true;
     }
 
     static createGame(owner: SocketType) {
@@ -60,6 +63,8 @@ export class Game {
         Game.initializedGames.push(game);
 
         owner.join(id);
+        owner.leave("open_games_broadcast");
+        OpenGamesHandler.instance.onCreate(game);
         game.emitOwner("game_set", game.getPacket(game.owner));
     }
 
@@ -83,9 +88,15 @@ export class Game {
             this.cornerCollisionsAllowed = settings.cornerCollisionsAllowed;
         }
 
+        if (settings.isOpen !== undefined) {
+            this.isOpen = settings.isOpen;
+            OpenGamesHandler.instance.onGameOpenStatusChange(this);
+        }
+
         this.emitPlayer("game_updated", {
             shipWrappingAllowed: this.shipWrappingAllowed,
-            cornerCollisionsAllowed: this.cornerCollisionsAllowed
+            cornerCollisionsAllowed: this.cornerCollisionsAllowed,
+            isOpen: this.isOpen
         })
     }
 
@@ -98,8 +109,7 @@ export class Game {
         if (socket === this.owner.socket) {
             board = this.owner.board;
             member = this.owner;
-        }
-        else if (socket === this.player?.socket) {
+        } else if (socket === this.player?.socket) {
             board = this.player.board;
             member = this.player;
         }
@@ -116,7 +126,7 @@ export class Game {
             return;
         }
 
-        if(member.ready) {
+        if (member.ready) {
             socket.emit("error", "You can't place ships when you are ready");
             return emitBoard();
         }
@@ -139,10 +149,14 @@ export class Game {
         if (this.player) {
             this.player.socket.leave(this.id);
             this.player.socket.data.game = null;
+            this.player.socket.join("open_games_broadcast")
         }
 
         this.owner.socket.leave(this.id);
         this.owner.socket.data.game = null;
+        this.owner.socket.join("open_games_broadcast")
+
+        OpenGamesHandler.instance.onRemove(this);
 
         Game.initializedGames = Game.initializedGames.filter(game => game.id !== this.id)
     }
@@ -224,7 +238,8 @@ export class Game {
             shots: member.shots,
             shipWrappingAllowed: this.shipWrappingAllowed,
             cornerCollisionsAllowed: this.cornerCollisionsAllowed,
-            requiredShips: this.requiredShips
+            requiredShips: this.requiredShips,
+            isOpen: this.isOpen
         }
     }
 
@@ -243,10 +258,13 @@ export class Game {
         this.emitPlayer("game_set", null);
         this.player.socket.leave(this.id);
         this.player.socket.data.game = null;
+        this.player.socket.join("open_games_broadcast")
         this.player = null;
+
         this.emitGameChange({
             player: null
         });
+        OpenGamesHandler.instance.onPlayerLeave(this);
     }
 
     join(socket: SocketType, errorCallback: (message: string) => void) {
@@ -278,6 +296,8 @@ export class Game {
 
         socket.join(this.id)
         socket.data.game = this
+        socket.leave("open_games_broadcast")
+        OpenGamesHandler.instance.onPlayerJoin(this);
         this.emitOwner("game_updated", {
             player: {
                 username: this.player.username,
@@ -286,6 +306,8 @@ export class Game {
             }
         })
         this.emitPlayer("game_set", this.getPacket(this.player))
+        this.emitOwner("info", `${socket.data.username} has joined the game`)
+        this.emitPlayer("info", `You have joined ${this.owner.username}'s game`)
     }
 
     /**
@@ -311,6 +333,9 @@ export class Game {
         this.player = null;
         socket.leave(this.id);
         socket.data.game = null;
+        socket.join("open_games_broadcast")
+        OpenGamesHandler.instance.onPlayerLeave(this);
+        OpenGamesHandler.instance.sendOpenGames(socket);
 
         this.owner.socket.emit("info", `${socket.data.username} has left the game`)
     }
@@ -346,6 +371,8 @@ export class Game {
 
         socket.join(this.id);
         socket.data.game = this;
+        socket.leave("open_games_broadcast")
+        OpenGamesHandler.instance.onPlayerJoin(this);
         socket.emit("info", "You have reconnected to the game")
         socket.broadcast.to(this.id).emit("info", `${socket.data.username} has reconnected`)
     }
@@ -413,6 +440,13 @@ export class Game {
             clearTimeout(this.playerTimeout);
 
         this.playerTimeout = setTimeout(() => this.checkPlayerKick(), 60000);
+    }
+
+    getOpenGame(): OpenGame {
+        return {
+            id: this.id,
+            owner: this.owner.username
+        }
     }
 
     emitOwner(event: ServerToClientEventsKeys, ...args: ServerToClientEventsValues) {

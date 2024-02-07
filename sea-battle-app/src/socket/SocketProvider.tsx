@@ -5,6 +5,7 @@ import {actions} from "../store/userSlice";
 import {id, notificationActions} from "../store/notificationSlice";
 import {ClientToServerEvents, ServerToClientEvents} from "@shared/socketTypes.ts";
 import {gameActions} from "../store/gameSlice.ts";
+import {openGamesActions} from "../store/openGamesSlice.ts";
 
 export const SocketContext = createContext<MutableRefObject<Socket<ServerToClientEvents, ClientToServerEvents> | null> | null>(null);
 
@@ -43,6 +44,10 @@ export function SocketProvider({children}: { children?: ReactNode }) {
         socket.on("game_set", (gameData) => {
             dispatch(gameActions.setGameData(gameData));
         })
+
+        socket.on("set_open_games", (openGames) => dispatch(openGamesActions.setOpenGames(openGames)))
+        socket.on("add_open_game", (openGame) => dispatch(openGamesActions.addOpenGame(openGame)))
+        socket.on("remove_open_game", (openGame) => dispatch(openGamesActions.removeOpenGame(openGame)))
 
         socket.on('info', (message) => {
             dispatch(notificationActions.addNotification({

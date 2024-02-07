@@ -58,7 +58,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-
+  flex-direction: column;
 
   .box {
     background-color: #fff;
@@ -161,6 +161,60 @@ body {
 
       .divider {
         padding: 20px 0;
+      }
+
+      .openGamesBox {
+        text-align: center;
+        width: 100%;
+
+        h4 {
+          margin-top: 50px;
+        }
+
+        ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+
+          li {
+            width: 80%;
+            padding: 5px 5px 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+            border: 1px solid #000025;
+            color: #000025;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            .idBox {
+              color: #aaa;
+              font-size: 12px;
+              padding-left: 10px;
+            }
+
+            button {
+              padding: 5px 10px;
+              border-radius: 5px;
+              border: 1px solid #000025;
+              color: white;
+              cursor: pointer;
+              transition: 0.3s;
+              margin-left: 10px;
+
+              &:hover {
+                background-color: #000025;
+                color: #fff;
+              }
+            }
+          }
+        }
       }
 
       input {

@@ -12,6 +12,7 @@ export interface GameState {
     winner: string | null;
     shipWrappingAllowed?: boolean,
     cornerCollisionsAllowed?: boolean
+    isOpen?: boolean;
     requiredShips: { [key: number]: number };
 }
 
@@ -37,7 +38,8 @@ const gameSlice = createSlice({
                 winner: payload.winner ?? null,
                 shipWrappingAllowed: payload?.shipWrappingAllowed ?? false,
                 cornerCollisionsAllowed: payload?.cornerCollisionsAllowed ?? false,
-                requiredShips: payload.requiredShips
+                requiredShips: payload.requiredShips,
+                isOpen: payload.isOpen
             } as GameState;
         },
         updateGameData(state, action) {
@@ -75,6 +77,7 @@ const gameSlice = createSlice({
 
             state.cornerCollisionsAllowed = action.payload.cornerCollisionsAllowed ?? state.cornerCollisionsAllowed;
             state.shipWrappingAllowed = action.payload.shipWrappingAllowed ?? state.shipWrappingAllowed;
+            state.isOpen = action.payload.isOpen ?? state.isOpen;
         },
         placeShip(state, action) {
             if (state === null || state.board === null) {

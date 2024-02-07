@@ -4,6 +4,7 @@ import {InterServerEvents, SocketData, SocketServerType, SocketType} from "./typ
 import {Game} from "./Game.ts";
 import {Server as SocketIOServer} from "socket.io";
 import {ClientToServerEvents, ServerToClientEvents} from "@shared/socketTypes.ts";
+import OpenGamesHandler from "./OpenGamesHandler.ts";
 
 
 module.exports = {
@@ -20,6 +21,7 @@ module.exports = {
 
         io.on('connection', (socket) => {
             console.log(`socket ${socket.id} connected`);
+            socket.join("open_games_broadcast")
 
             socket.on("create_game", () => Game.createGame(socket))
 
@@ -69,6 +71,7 @@ function setUserName(socket: SocketType, username: string | null, callback: (err
     }
 
     callback(false)
+    OpenGamesHandler.instance.sendOpenGames(socket)
     console.log(`Set username to ${username} for socket ${socket.id}`)
 }
 
