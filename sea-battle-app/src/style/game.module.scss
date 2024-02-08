@@ -26,15 +26,13 @@
     margin-bottom: 1rem;
 
     .centerBox {
-      min-width: 500px;
-
       .info {
         .infoBox {
           background-color: #f5f5f5;
           border: 1px solid #e0e0e0;
           padding: 20px;
           border-radius: 5px;
-          margin: 0 5px 5px;
+          margin-bottom: 5px;
           text-align: center;
         }
 
@@ -141,7 +139,10 @@
       flex-direction: column;
       background-color: #f5f5f5;
       border: 1px solid #e0e0e0;
-      padding: 0 50px 50px 0;
+      padding-bottom: 50px;
+      height: fit-content !important;
+      align-items: center;
+      padding-right: 30px;
 
       h2 {
         text-align: center;
@@ -153,8 +154,6 @@
         display: flex;
 
         & > div {
-          width: 50px;
-          height: 50px;
           display: flex;
           justify-content: center;
         }
@@ -189,7 +188,6 @@
 
         .cell {
           align-items: center;
-          //border: 1px solid #000533;
           transition: 0.2s;
           position: relative;
           box-sizing: border-box;
@@ -213,49 +211,49 @@
               position: absolute;
 
               &.center {
-                width: 40px;
-                height: 40px;
-                top: 5px;
-                left: 5px;
+                width: 80%;
+                height: 80%;
+                top: 10%;
+                left: 10%;
                 border-radius: 10px;
               }
 
               &.top {
-                width: 40px;
-                height: 20px;
+                width: 80%;
+                height: 40%;
                 top: 0;
-                left: 5px;
+                left: 10%;
               }
 
               &.bottom {
-                width: 40px;
-                height: 20px;
-                top: 30px;
-                left: 5px;
+                width: 80%;
+                height: 40%;
+                top: 60%;
+                left: 10%;
               }
 
               &.left {
-                width: 20px;
-                height: 40px;
-                top: 5px;
+                width: 40%;
+                height: 80%;
+                top: 10%;
                 left: 0;
               }
 
               &.right {
-                width: 20px;
-                height: 40px;
-                top: 5px;
-                left: 30px;
+                width: 40%;
+                height: 80%;
+                top: 10%;
+                left: 60%;
               }
             }
           }
 
           .hit {
-            width: 20px;
-            height: 20px;
+            width: 40%;
+            height: 40%;
             position: absolute;
-            top: 15px;
-            left: 15px;
+            top: 30%;
+            left: 30%;
             background-color: #ff0000;
             border-radius: 50%;
           }
@@ -297,11 +295,11 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
+  width: 100%;
   z-index: 1000;
   background-color: rgba(0, 0, 0, 0.5);
 
@@ -312,7 +310,6 @@
     background-color: #fff;
     color: #000025;
     text-align: center;
-    width: 300px;
     cursor: pointer;
 
     .buttonsBox {

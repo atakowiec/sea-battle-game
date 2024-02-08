@@ -150,15 +150,16 @@ export default function Game() {
     return (
         <>
             {game.winner && <WinnerScreen/>}
-            <div className={gameStyle.gameContainer}>
+            <div className={`${gameStyle.gameContainer} col-12 pt-3`}>
                 <h1>Sea Battle Game</h1>
-                <div className={gameStyle.box}>
-                    <MyBoard wrongPlacement={wrongPlacement}/>
-                    <div className={gameStyle.centerBox}>
+                <div className={`${gameStyle.box} row mx-0`}>
+                    <MyBoard wrongPlacement={wrongPlacement} className={"col-11 col-lg-4 order-1"}/>
+                    <div
+                        className={`${gameStyle.centerBox} col-11 col-lg-3 py-4 py-lg-0 px-0 px-lg-1 order-0 order-lg-1`}>
                         <GameInfo game={game} shipCounts={shipCounts} wrongPlacement={wrongPlacement}/>
                         <Chat/>
                     </div>
-                    <OpponentBoard/>
+                    <OpponentBoard className={"col-11 col-lg-4 order-1 order-lg-2 mt-3 mt-lg-0"}/>
                 </div>
             </div>
         </>
@@ -183,8 +184,8 @@ function WinnerScreen() {
     }
 
     return (
-        <div className={gameStyle.winnerScreenContainer}>
-            <div className={gameStyle.winnerScreen}>
+        <div className={`${gameStyle.winnerScreenContainer} row mx-0`}>
+            <div className={`${gameStyle.winnerScreen} col-10 col-md-8 col-lg-6 col-xl-4 col-xxl-3`}>
                 <h1>
                     Game finished
                 </h1>
@@ -209,10 +210,26 @@ function WinnerScreen() {
     )
 }
 
-function OpponentBoard() {
+function OpponentBoard({className}: { className?: string }) {
     const game = useSelector((state: State) => state.game)
     const board = game.shots!
     const socket = useSocket()
+    const [cellSize, setCellSize] = useState(0);
+
+    function calculateCellSize() {
+        const width = document.getElementById("opponentsBoard")?.offsetWidth
+        if (!width) return
+        setCellSize(width / 12)
+    }
+
+    useEffect(() => {
+        calculateCellSize()
+        window.addEventListener("resize", calculateCellSize)
+
+        return () => {
+            window.removeEventListener("resize", calculateCellSize)
+        }
+    }, [])
 
     function onClick(x: number, y: number) {
         if (game.status !== "playing") return
@@ -224,22 +241,30 @@ function OpponentBoard() {
         socket.emit("send_shot", x, y)
     }
 
+    function getCellStyle() {
+        return {
+            width: cellSize + "px",
+            height: cellSize + "px"
+        }
+    }
+
     return (
-        <div className={gameStyle.board}>
+        <div className={`${gameStyle.board} ${className}`} id={"opponentsBoard"}>
             <h2>
                 Your shots
             </h2>
             <div className={gameStyle.row}>
-                <div className={`${gameStyle.cell} ${gameStyle.colNumber}`}></div>
+                <div className={`${gameStyle.cell} ${gameStyle.colNumber}`} style={getCellStyle()}></div>
                 {board[0].map((_, i) => (
-                    <div key={i} className={`${gameStyle.cell} ${gameStyle.colNumber}`}>{i + 1}</div>
+                    <div key={i} className={`${gameStyle.cell} ${gameStyle.colNumber}`} style={getCellStyle()}>{i + 1}</div>
                 ))}
             </div>
             {board.map((row, i) => (
                 <div key={i} className={gameStyle.row}>
-                    <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}> {String.fromCharCode(65 + i)}</div>
+                    <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`} style={getCellStyle()}> {String.fromCharCode(65 + i)}</div>
                     {row.map((cell, j) => (
-                        <Cell key={j} cell={cell} x={i} y={j} click={() => onClick(i, j)} board={board}/>
+                        <Cell key={j} cell={cell} x={i} y={j} click={() => onClick(i, j)} board={board}
+                              style={getCellStyle()}/>
                     ))}
                 </div>
             ))}
@@ -247,13 +272,29 @@ function OpponentBoard() {
     )
 }
 
-function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
+function MyBoard({wrongPlacement, className}: { wrongPlacement: boolean[][], className?: string }) {
     const game = useSelector((state: State) => state.game)
     const board = game.board!
     const dispatch = useDispatch()
     const socket = useSocket()
     const username = useSelector((state: State) => state.user.username)
     const playerData = game.owner.username === username ? game.owner : game.player
+    const [cellSize, setCellSize] = useState(0);
+
+    function calculateCellSize() {
+        const width = document.getElementById("yourBoard")?.offsetWidth
+        if (!width) return
+        setCellSize(width / 12)
+    }
+
+    useEffect(() => {
+        calculateCellSize()
+        window.addEventListener("resize", calculateCellSize)
+
+        return () => {
+            window.removeEventListener("resize", calculateCellSize)
+        }
+    }, [])
 
     const onClick = (x: number, y: number) => {
         if (game.status !== 'preparing') return;
@@ -270,24 +311,34 @@ function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
         socket.emit("place_ships", changedCell)
     }
 
+    function getCellStyle() {
+        return {
+            width: cellSize + "px",
+            height: cellSize + "px"
+        }
+    }
+
     return (
-        <div className={gameStyle.board}>
+        <div className={`${gameStyle.board} ${className}`} id="yourBoard">
             <h2>
                 Your board
             </h2>
             <div className={gameStyle.row}>
-                <div className={`${gameStyle.cell} ${gameStyle.colNumber}`}></div>
+                <div className={`${gameStyle.cell} ${gameStyle.colNumber}`} style={getCellStyle()}></div>
                 {board[0].map((_, i) => (
-                    <div key={i} className={`${gameStyle.cell} ${gameStyle.colNumber}`}>{i + 1}</div>
+                    <div key={i} className={`${gameStyle.cell} ${gameStyle.colNumber}`}
+                         style={getCellStyle()}>{i + 1}</div>
                 ))}
             </div>
             {board.map((row, i) => (
                 <div key={i} className={gameStyle.row}>
-                    <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}> {String.fromCharCode(65 + i)}</div>
+                    <div className={`${gameStyle.cell} ${gameStyle.rowLetter}`}
+                         style={getCellStyle()}> {String.fromCharCode(65 + i)}</div>
                     {row.map((cell, j) => (
                         <Cell key={j} cell={cell} x={i} y={j} click={() => onClick(i, j)}
                               placedWrong={wrongPlacement[i][j]}
-                              board={board}/>
+                              board={board}
+                              style={getCellStyle()}/>
                     ))}
                 </div>
             ))}
@@ -295,18 +346,19 @@ function MyBoard({wrongPlacement}: { wrongPlacement: boolean[][] }) {
     )
 }
 
-function Cell({cell, click, x, y, placedWrong, board}: {
+function Cell({cell, click, x, y, placedWrong, board, style}: {
     board: BoardType,
     cell: BoardCell,
     click?: () => void,
     x: number,
     y: number,
-    placedWrong?: boolean
+    placedWrong?: boolean,
+    style: { width: string, height: string }
 }) {
     const neighbors = getCellNeighborsPresence(x, y, board)
 
     return (
-        <div className={gameStyle.cell} onClick={click ? click : undefined}>
+        <div className={gameStyle.cell} onClick={click ? click : undefined} style={style}>
             {cell.ship &&
                 <div className={`${gameStyle.ship} ${placedWrong && gameStyle.wrongPlaced}`}>
                     <div className={`${gameStyle.shipPart} ${neighbors.top && gameStyle.top}`}/>

@@ -59,8 +59,8 @@ export default function PreGameLobby() {
 
     return (
         <div className={`${appStyle.centeredContainer}`}>
-            <div className={`${appStyle.box} ${appStyle.preGameLobby}`}>
-                <h1>
+            <div className={`${appStyle.box} ${appStyle.preGameLobby} col-11 col-md-6 col-xl-4 col-xxl-3`}>
+                <h1 className={"col-12 text-center"}>
                     GAME LOBBY
                 </h1>
                 <h5>

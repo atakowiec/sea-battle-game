@@ -31,7 +31,7 @@ export default function MainMenu() {
 
     return (
         <div className={appStyle.centeredContainer}>
-            <div className={`${appStyle.preGameMenu} ${appStyle.box}`}>
+            <div className={`${appStyle.preGameMenu} ${appStyle.box} col-11 col-md-6 col-xl-4 col-xxl-3`}>
                 <h1>Sea Battle Game!</h1>
                 <h5>Hello {username}</h5>
                 <div>
