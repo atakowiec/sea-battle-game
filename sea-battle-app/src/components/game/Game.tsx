@@ -339,6 +339,7 @@ function GameInfo({game, shipCounts, wrongPlacement}: {
     const username = useSelector((state: State) => state.user.username)
     const playerData = useSelector((state: State) => state.game.owner.username === username ? state.game.owner : state.game.player)
     const dispatch = useDispatch()
+    const isAdmin = game.owner.username === username
 
     function translateStatus(status: GameStatus) {
         switch (status) {
@@ -387,6 +388,16 @@ function GameInfo({game, shipCounts, wrongPlacement}: {
                 <div className={gameStyle.gameId}>
                     Game ID: {game.id}
                 </div>
+                <div className={gameStyle.buttonsBox}>
+                    <button className={gameStyle.button} style={{marginRight: "5px"}}
+                            onClick={() => socket.emit("leave_game")}>
+                        {isAdmin ? "End game" : "Leave game"}
+                    </button>
+                    {game.status === "playing" &&
+                        <button className={gameStyle.button} onClick={() => socket.emit("surrender")}>
+                            Surrender
+                        </button>}
+                </div>
             </div>
             <div className={gameStyle.infoBox}>
                 <h2>Participants</h2>
@@ -434,7 +445,7 @@ function GameInfo({game, shipCounts, wrongPlacement}: {
                     )
                 })}
 
-                {username === game.owner.username &&
+                {isAdmin &&
                     <button className={`${gameStyle.startGameButton} ${gameStyle.button}`} onClick={startShooting}
                             disabled={!game.player?.ready || !game.owner.ready}>
                         Start game

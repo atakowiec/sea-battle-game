@@ -77,9 +77,9 @@ export class Game {
     }
 
     getGameMember(socket: SocketType) {
-        if (this.owner.socket === socket) {
+        if (this.isAdmin(socket)) {
             return this.owner;
-        } else if (this.player?.socket === socket) {
+        } else if (this.isPlayer(socket)) {
             return this.player;
         }
 
@@ -388,6 +388,8 @@ export class Game {
     checkOwnerKick() {
         if (this.owner.socket.disconnected) {
             this.remove()
+            if (this.player)
+                this.player.socket.volatile.emit("info", "The admin has left the game, game ended")
         }
     }
 
@@ -528,14 +530,16 @@ export class Game {
 
     /**
      * Leave the game
-     * NOTE: It does not allow the owner to leave the game
+     * NOTE: If the owner leaves the game, the game is deleted
      *
      * @param socket The socket that wants to leave the game
      */
     leave(socket: SocketType) {
         if (!Game.checkUsername(socket)) return;
-        if (!this.isPlayer(socket)) {
-            socket.emit("error", "Only the player can leave the game");
+        if (this.isAdmin(socket)) {
+            this.emitPlayer("info", "The admin has left the game, game ended")
+            this.emitOwner("info", "You have left the game, game ended")
+            this.remove();
             return;
         }
 
@@ -549,10 +553,6 @@ export class Game {
         this.player = null;
         socket.leave(this.id);
         socket.data.game = null;
-        socket.join("open_games_broadcast")
-        OpenGamesHandler.instance.onPlayerLeave(this);
-        OpenGamesHandler.instance.sendOpenGames(socket);
-
         this.owner.socket.emit("info", `${socket.data.username} has left the game`)
 
         if (this.status !== "lobby") {
@@ -560,9 +560,24 @@ export class Game {
             this.resetGame()
         }
 
+        socket.join("open_games_broadcast")
+        OpenGamesHandler.instance.onPlayerLeave(this);
+        OpenGamesHandler.instance.sendOpenGames(socket);
+
         if (this.playerTimeout) {
             clearTimeout(this.playerTimeout);
         }
+    }
+
+    surrender(socket: SocketType) {
+        if (!Game.checkUsername(socket)) return;
+        if (this.status !== "playing") return;
+
+        const member = this.getGameMember(socket);
+        if (!member) return;
+
+        this.win(member === this.owner ? this.player! : this.owner);
+        this.emit("info", `${socket.data.username} has surrendered`)
     }
 
     /**

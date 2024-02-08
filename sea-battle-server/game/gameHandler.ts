@@ -49,6 +49,8 @@ module.exports = {
 
             socket.on("end_screen_action", (action) => socket.data.game?.endScreenAction(socket, action as any))
 
+            socket.on("surrender", () => socket.data.game?.surrender(socket))
+
             socket.on('disconnect', () => {
                 console.log(`socket ${socket.id} disconnected`);
 

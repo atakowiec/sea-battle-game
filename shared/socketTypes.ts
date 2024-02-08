@@ -30,6 +30,7 @@ export interface ClientToServerEvents {
     start_shooting: () => void
     send_shot: (x: number, y: number) => void
     end_screen_action: (action: string) => void
+    surrender: () => void
 }
 
 export interface SettingsType {
