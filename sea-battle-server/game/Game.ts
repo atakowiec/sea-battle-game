@@ -190,6 +190,23 @@ export class Game {
             status: this.status,
             winner: this.winner
         });
+
+        const changes: ChangedCell[] = []
+        const opponent = member === this.owner ? this.player! : this.owner;
+        for (let i = 0; i < opponent.board!.length; i++) {
+            for (let j = 0; j < opponent.board![i].length; j++) {
+                if (member.board![i][j].ship && !opponent.shots![i][j].hit) {
+                    changes.push({
+                        x: i,
+                        y: j,
+                        hit: false,
+                        ship: true
+                    })
+                }
+            }
+        }
+
+        opponent.socket.emit("send_cell_change", changes, false);
     }
 
     endScreenAction(socket: SocketType, action: "play_again" | "go_to_lobby" | "leave") {
@@ -294,6 +311,7 @@ export class Game {
 
                 // iterate over the neighbors and add them to the changes
                 for (const neighbor of cellNeighbors) {
+                    if(shooter.shots![neighbor.x][neighbor.y].hit) continue;
                     // if the neighbor is not already hit and not already in the changes array
                     if (!neighbor.ship && !neighbor.hit && !shooterChanges.some(pos => pos.x === neighbor.x && pos.y === neighbor.y)) {
                         // if any neighbor should be mark as hit, add it to the changes and change the shooter's shots board

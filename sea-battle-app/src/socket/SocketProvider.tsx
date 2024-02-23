@@ -14,7 +14,7 @@ export function SocketProvider({children}: { children?: ReactNode }) {
     const dispatch = useDispatch()
 
     useEffect(() => {
-        const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://192.168.0.164:3000');
+        const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://192.168.1.25:3000');
 
         socketRef.current = socket;
 

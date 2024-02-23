@@ -1,6 +1,7 @@
 export interface BoardCell {
     ship: boolean;
     hit: boolean;
+    new?: boolean;
 }
 
 export type BoardType = BoardCell[][]

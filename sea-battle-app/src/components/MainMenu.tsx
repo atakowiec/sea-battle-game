@@ -4,6 +4,8 @@ import {State} from "../store";
 import {useEffect, useRef, useState} from "react";
 import useSocket from "../socket/useSocket.ts";
 import {openGamesActions} from "../store/openGamesSlice.ts";
+import {FaEdit} from "react-icons/fa";
+import {actions} from "../store/userSlice.ts";
 
 export default function MainMenu() {
     const username = useSelector((state: State) => state.user.username)
@@ -29,11 +31,16 @@ export default function MainMenu() {
         })
     }
 
+    function resetUsername() {
+        dispatch(actions.setUsername(null))
+        localStorage.removeItem("username")
+    }
+
     return (
         <div className={appStyle.centeredContainer}>
             <div className={`${appStyle.preGameMenu} ${appStyle.box} col-11 col-md-6 col-xl-4 col-xxl-3`}>
                 <h1>Sea Battle Game!</h1>
-                <h5>Hello {username}</h5>
+                <h5>Hello {username} <FaEdit className={appStyle.editUsername} onClick={resetUsername} /></h5>
                 <div>
                     <button onClick={createNewRoom}>
                         Create new game

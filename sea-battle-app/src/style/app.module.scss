@@ -183,12 +183,23 @@ input[type="checkbox"] {
         margin: 0 40px;
       }
 
-      .h5 {
-        margin-bottom: 20px;
+      h5 {
+        margin-bottom: 30px;
       }
 
       .divider {
         padding: 20px 0;
+      }
+
+      .editUsername {
+        padding: 2px;
+        color: #999;
+        cursor: pointer;
+        transition: 0.2s;
+
+        &:hover {
+          color: #000025;
+        }
       }
 
       .openGamesBox {

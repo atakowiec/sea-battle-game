@@ -13,7 +13,7 @@ module.exports = {
     register: async function (server: Server) {
         const io: SocketServerType = new SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server.listener, {
             cors: {
-                origin: ["http://localhost:5173", "http://192.168.0.164:5173"],
+                origin: ["http://localhost:5173", "http://192.168.0.25:5173", "http://83.5.108.177", "http://statki:5173"],
             }
         });
 

@@ -249,7 +249,7 @@ function OpponentBoard({className}: { className?: string }) {
     }
 
     return (
-        <div className={`${gameStyle.board} ${className}`} id={"opponentsBoard"}>
+        <div className={`${gameStyle.board} ${className} ${game.yourTurn && game.status === "playing" ? gameStyle.currentTurnBoard : ""}`} id={"opponentsBoard"}>
             <h2>
                 Your shots
             </h2>
@@ -319,7 +319,7 @@ function MyBoard({wrongPlacement, className}: { wrongPlacement: boolean[][], cla
     }
 
     return (
-        <div className={`${gameStyle.board} ${className}`} id="yourBoard">
+        <div className={`${gameStyle.board} ${className} ${!game.yourTurn && game.status === "playing" ? gameStyle.currentTurnBoard : ""}`} id="yourBoard">
             <h2>
                 Your board
             </h2>
@@ -358,7 +358,7 @@ function Cell({cell, click, x, y, placedWrong, board, style}: {
     const neighbors = getCellNeighborsPresence(x, y, board)
 
     return (
-        <div className={gameStyle.cell} onClick={click ? click : undefined} style={style}>
+        <div className={`${gameStyle.cell} ${board[x][y].new ? gameStyle.newCell : ""}`} onClick={click ? click : undefined} style={style}>
             {cell.ship &&
                 <div className={`${gameStyle.ship} ${placedWrong && gameStyle.wrongPlaced}`}>
                     <div className={`${gameStyle.shipPart} ${neighbors.top && gameStyle.top}`}/>

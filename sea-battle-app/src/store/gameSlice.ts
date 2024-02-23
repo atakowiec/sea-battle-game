@@ -99,9 +99,19 @@ const gameSlice = createSlice({
             const changedCells: ChangedCell[] = action.payload.changedCell;
             const boardToChange = action.payload.yourBoard ? state.board! : state.shots;
 
+            for(const cell of boardToChange.flat())
+                delete cell.new;
+
             for (const cell of changedCells) {
-                boardToChange[cell.x][cell.y].hit = cell.hit;
-                boardToChange[cell.x][cell.y].ship = cell.ship;
+                if (cell.hit != undefined) {
+                    boardToChange[cell.x][cell.y].hit = cell.hit;
+                }
+
+                if (cell.ship != undefined) {
+                    boardToChange[cell.x][cell.y].ship = cell.ship;
+                }
+
+                boardToChange[cell.x][cell.y].new = true;
             }
         }
     }
