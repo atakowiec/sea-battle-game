@@ -1,5 +1,7 @@
 # Sea Battle game
 
+![game preview](https://github.com/atakowiec/atakowiec/blob/main/assets/sea-battle/game.png)
+
 ## Description
 This is a real-time pvp Battleships game where players can play against each other.
 
